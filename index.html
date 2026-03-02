@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Periodic Table of Elements</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Periodic Table of Elements</h1>
+  <p>Click any element to explore its history and uses</p>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--alkali)"></div>Alkali Metals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--alkaline)"></div>Alkaline Earth</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--transition)"></div>Transition Metals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--post-transition)"></div>Post-Transition</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--metalloid)"></div>Metalloids</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--nonmetal)"></div>Nonmetals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--halogen)"></div>Halogens</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--noble)"></div>Noble Gases</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--lanthanide)"></div>Lanthanides</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--actinide)"></div>Actinides</div>
+</div>
+
+<div class="table-wrap">
+  <div class="table-grid" id="ptable"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closePanel()"></div>
+
+<div class="info-modal" id="infoPanel">
+  <button class="close-btn" onclick="closePanel()">[ CLOSE ]</button>
+  <div class="info-badge" id="infoBadge">
+    <div class="b-sym" id="bSym"></div>
+    <div class="b-details">
+      <div class="b-num" id="bNum"></div>
+      <div class="b-name" id="bName"></div>
+      <div class="b-mass" id="bMass"></div>
+    </div>
+  </div>
+  <div class="info-meta" id="infoMeta"></div>
+  <div class="info-sections">
+    <div class="info-section">
+      <h3>History</h3>
+      <p id="infoHistory"></p>
+    </div>
+    <div class="info-section">
+      <h3>Uses</h3>
+      <p id="infoUses"></p>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
