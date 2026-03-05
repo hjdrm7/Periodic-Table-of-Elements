@@ -1,55 +1,28 @@
 // ════════════════════════════════════════════════
-//  API KEYS — paste your keys here
-//  Kimi:     https://platform.moonshot.ai/console/api-keys
-//  DeepSeek: https://platform.deepseek.com/api_keys
+//  API KEY — paste your DeepSeek key here
+//  Get key at: https://platform.deepseek.com/api_keys
 // ════════════════════════════════════════════════
-const API_KEYS = {
-  kimi: 'sk-g4rnnvfvTTN0C2fw1erYebbG6yxovnqUMCaPN9qnkveDJ8Rg', // paste your Moonshot AI key here (primary)
-  deepseek: 'sk-881f94fd1b6b46b69d71023b620e5c81', // paste your DeepSeek key here (fallback)
-};
-
-const PROVIDERS = {
-  kimi: {
-    url: 'https://api.moonshot.cn/v1/chat/completions',
-    model: 'moonshot-v1-8k',
-  },
-  deepseek: {
-    url: 'https://api.deepseek.com/chat/completions',
-    model: 'deepseek-chat',
-  },
-};
+const API_KEY = 'sk-881f94fd1b6b46b69d71023b620e5c81'; // paste your DeepSeek key here
 // ════════════════════════════════════════════════
 
-// Tries Kimi first, falls back to DeepSeek if Kimi key is missing or fails
 async function callAI(prompt, maxTokens) {
-  async function callModel(provider) {
-    const key = API_KEYS[provider];
-    if (!key) throw new Error('no key for ' + provider);
-    const { url, model } = PROVIDERS[provider];
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + key,
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-    const raw = data.choices[0].message.content;
-    return JSON.parse(raw.replace(/```json|```/g, '').trim());
-  }
-
-  try {
-    return await callModel('kimi');
-  } catch (e1) {
-    console.warn('Kimi failed, falling back to DeepSeek:', e1.message);
-    return await callModel('deepseek');
-  }
+  if (!API_KEY) throw new Error('No API key set.');
+  const res = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + API_KEY,
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  const raw = data.choices[0].message.content;
+  return JSON.parse(raw.replace(/```json|```/g, '').trim());
 }
 
 // ════════════════════════════════════════════════
