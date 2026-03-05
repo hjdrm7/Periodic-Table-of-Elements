@@ -1,4 +1,45 @@
 // ════════════════════════════════════════════════
+//  AI — powered by Puter.js (free, no API key needed)
+//  Model: deepseek/deepseek-v3.2-speciale
+// ════════════════════════════════════════════════
+
+window.addEventListener('error', function(e) {
+  console.error('Script error (table protected):', e.message);
+});
+
+async function callAI(prompt) {
+  const response = await puter.ai.chat(prompt, {
+    model: 'deepseek/deepseek-v3.2-speciale',
+  });
+  const raw = response.message.content;
+  return JSON.parse(raw.replace(/```json|```/g, '').trim());
+}
+
+async function callKnowMore(prompt, elementName) {
+  try {
+    return { source: 'ai', data: await callAI(prompt) };
+  } catch (e) {
+    console.warn('AI failed, trying Wikipedia:', e.message);
+  }
+  const wikiRes = await fetch(
+    'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(elementName),
+    { headers: { 'Accept': 'application/json' } }
+  );
+  if (!wikiRes.ok) throw new Error('Wikipedia fetch failed');
+  const wiki = await wikiRes.json();
+  return {
+    source: 'wikipedia',
+    data: {
+      summary: wiki.extract || 'No summary available.',
+      discovery: '', occurrence: '', synthesis: '',
+      properties: [], uses: [],
+      wikiUrl: (wiki.content_urls && wiki.content_urls.desktop && wiki.content_urls.desktop.page)
+        || ('https://en.wikipedia.org/wiki/' + encodeURIComponent(elementName)),
+    },
+  };
+}
+
+// ════════════════════════════════════════════════
 //  ELEMENT DATA
 // ════════════════════════════════════════════════
 const CATEGORIES = {
@@ -16,9 +57,6 @@ const CATEGORIES = {
 
 const SHELL_NAMES = ['K','L','M','N','O','P','Q'];
 
-// Fields: n, sym, name, cat, mass, period, group,
-//         melt (°C), boil (°C), density (g/cm³ or g/L for gases),
-//         densityNote, discoveredBy, year
 const ELEMENTS = [
   {n:1,  sym:'H',  name:'Hydrogen',      cat:'Reactive Nonmetal',    mass:'1.008',   period:1,group:1,  melt:'-259.1',boil:'-252.9',density:'0.0899 g/L',      discoveredBy:'Henry Cavendish',                year:'1766'},
   {n:2,  sym:'He', name:'Helium',        cat:'Noble Gas',            mass:'4.003',   period:1,group:18, melt:'−272.2',boil:'−268.9',density:'0.1786 g/L',      discoveredBy:'Pierre Janssen & Norman Lockyer', year:'1868'},
@@ -250,45 +288,20 @@ function openModal(el) {
         ${el.cat}
       </div>
     </div>
-
     <div class="modal-divider"></div>
-
     <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-label">Atomic Mass</div>
-        <div class="stat-val">${el.mass}<span class="stat-unit">u</span></div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Group / Period</div>
-        <div class="stat-val">${el.group} / ${period}</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Melting Point</div>
-        <div class="stat-val">${el.melt}<span class="stat-unit">°C</span></div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Boiling Point</div>
-        <div class="stat-val">${el.boil}<span class="stat-unit">°C</span></div>
-      </div>
-      <div class="stat-box full">
-        <div class="stat-label">Density (at melting point)</div>
-        <div class="stat-val">${el.density}<span class="stat-unit">g/cm³</span></div>
-      </div>
+      <div class="stat-box"><div class="stat-label">Atomic Mass</div><div class="stat-val">${el.mass}<span class="stat-unit">u</span></div></div>
+      <div class="stat-box"><div class="stat-label">Group / Period</div><div class="stat-val">${el.group} / ${period}</div></div>
+      <div class="stat-box"><div class="stat-label">Melting Point</div><div class="stat-val">${el.melt}<span class="stat-unit">°C</span></div></div>
+      <div class="stat-box"><div class="stat-label">Boiling Point</div><div class="stat-val">${el.boil}<span class="stat-unit">°C</span></div></div>
+      <div class="stat-box full"><div class="stat-label">Density (at melting point)</div><div class="stat-val">${el.density}<span class="stat-unit">g/cm³</span></div></div>
     </div>
-
     <div class="modal-divider"></div>
-
     <div class="section-label">Electron Shells</div>
     <div class="shell-row">
-      ${shells.map((c,i) =>
-        `<div class="shell-pill" style="color:${color};border-color:${rga(color,0.35)};background:${rga(color,0.09)}">
-          ${SHELL_NAMES[i]}: ${c}
-        </div>`
-      ).join('')}
+      ${shells.map((c,i) => `<div class="shell-pill" style="color:${color};border-color:${rga(color,0.35)};background:${rga(color,0.09)}">${SHELL_NAMES[i]}: ${c}</div>`).join('')}
     </div>
-
     <div class="modal-divider"></div>
-
     <div class="section-label">Discovery</div>
     <div class="discovery-box">
       <div class="discovery-item">
@@ -300,12 +313,7 @@ function openModal(el) {
         <div class="stat-val" style="font-size:1.1rem;margin-top:2px;color:${color}">${el.year}</div>
       </div>
     </div>
-
-    <button
-      class="know-more-btn"
-      onclick="openKnowMore(${el.n})"
-      style="color:${color};border-color:${rga(color,0.35)};--btn-color:${color};--btn-bg:${rga(color,0.08)}"
-    >
+    <button class="know-more-btn" onclick="openKnowMore(${el.n})" style="color:${color};border-color:${rga(color,0.35)};--btn-color:${color};--btn-bg:${rga(color,0.08)}">
       <span>› Know More about ${el.name}</span>
       <span class="btn-arrow">→</span>
     </button>
@@ -325,156 +333,87 @@ function closeModal() {
 }
 
 // ════════════════════════════════════════════════
-//  3D ATOM MODEL — true 3D rotation with perspective
+//  3D ATOM MODEL
 // ════════════════════════════════════════════════
 function drawBohr(atomicNum, color) {
   const rect = canvasWrap.getBoundingClientRect();
   canvas.width  = rect.width  || 340;
   canvas.height = rect.height || 360;
-
   const ctx = canvas.getContext('2d');
   const shells = getShells(atomicNum);
   const rgb = hexToRgb(color);
   const shellCount = shells.length;
-
-  // Each shell gets a unique fixed tilt so orbits look spread in 3D space
   const shellTilts = shells.map((_, s) => (s * Math.PI * 0.45) % (Math.PI * 2));
-
-  // Electron angles evenly distributed per shell
-  const eAngles = shells.map((count, s) =>
-    Array.from({length: count}, (_, e) => (e / count) * Math.PI * 2 + s * 0.5)
-  );
-  // Inner shells faster, alternating direction
+  const eAngles = shells.map((count, s) => Array.from({length: count}, (_, e) => (e / count) * Math.PI * 2 + s * 0.5));
   const speeds = shells.map((_, i) => (0.022 - i * 0.002) * (i % 2 === 0 ? 1 : -1));
 
-  // Project a 3D point using rotX (drag Y) and rotY (drag X) then perspective
   function project(x, y, z) {
-    // Rotate around Y axis
     const cosY = Math.cos(rotAngle), sinY = Math.sin(rotAngle);
-    let x1 = x * cosY - z * sinY;
-    let z1 = x * sinY + z * cosY;
-    // Rotate around X axis
+    let x1 = x*cosY - z*sinY, z1 = x*sinY + z*cosY;
     const cosX = Math.cos(tiltAngle), sinX = Math.sin(tiltAngle);
-    let y1 = y * cosX - z1 * sinX;
-    let z2 = y * sinX + z1 * cosX;
-    // Perspective divide
-    const fov = 520;
-    const scale = fov / (fov + z2 * 0.25);
-    return { sx: x1 * scale, sy: y1 * scale, depth: z2, scale };
+    let y1 = y*cosX - z1*sinX, z2 = y*sinX + z1*cosX;
+    const fov = 520, scale = fov / (fov + z2 * 0.25);
+    return { sx: x1*scale, sy: y1*scale, depth: z2, scale };
   }
 
   function frame() {
-    const W = canvas.width, H = canvas.height;
-    const cx = W / 2, cy = H / 2;
-    const maxR = (Math.min(W, H) / 2 - 14) * zoomVal;
-    const shellRadii = shells.map((_, i) => maxR * (i + 1) / shellCount);
+    const W=canvas.width, H=canvas.height, cx=W/2, cy=H/2;
+    const maxR = (Math.min(W,H)/2-14)*zoomVal;
+    const shellRadii = shells.map((_,i) => maxR*(i+1)/shellCount);
+    ctx.clearRect(0,0,W,H);
+    const bgG = ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.7);
+    bgG.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.07)`);
+    bgG.addColorStop(1,'transparent');
+    ctx.fillStyle=bgG; ctx.fillRect(0,0,W,H);
 
-    ctx.clearRect(0, 0, W, H);
-
-    // Radial bg glow
-    const bgG = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.7);
-    bgG.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.07)`);
-    bgG.addColorStop(1, 'transparent');
-    ctx.fillStyle = bgG;
-    ctx.fillRect(0, 0, W, H);
-
-    // ── Draw orbit rings (each as a polyline of projected 3D circle) ──
-    for (let s = 0; s < shellCount; s++) {
-      const r = shellRadii[s];
-      const tilt = shellTilts[s];
-      const pts = 72;
+    for (let s=0; s<shellCount; s++) {
+      const r=shellRadii[s], tilt=shellTilts[s], pts=72;
       ctx.beginPath();
-      for (let i = 0; i <= pts; i++) {
-        const a = (i / pts) * Math.PI * 2;
-        // Circle in the plane defined by shellTilts[s]
-        const ox = r * Math.cos(a);
-        const oy = r * Math.sin(a) * Math.cos(tilt);
-        const oz = r * Math.sin(a) * Math.sin(tilt);
-        const p = project(ox, oy, oz);
-        if (i === 0) ctx.moveTo(cx + p.sx, cy + p.sy);
-        else         ctx.lineTo(cx + p.sx, cy + p.sy);
+      for (let i=0; i<=pts; i++) {
+        const a=(i/pts)*Math.PI*2;
+        const p=project(r*Math.cos(a), r*Math.sin(a)*Math.cos(tilt), r*Math.sin(a)*Math.sin(tilt));
+        if(i===0) ctx.moveTo(cx+p.sx,cy+p.sy); else ctx.lineTo(cx+p.sx,cy+p.sy);
       }
-      ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.18)`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      ctx.strokeStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.18)`; ctx.lineWidth=1; ctx.stroke();
     }
 
-    // ── Collect electrons with depth for sorting ──
-    const electrons = [];
-    for (let s = 0; s < shellCount; s++) {
-      const r = shellRadii[s];
-      const tilt = shellTilts[s];
-      for (let e = 0; e < shells[s]; e++) {
-        const a = eAngles[s][e];
-        const ox = r * Math.cos(a);
-        const oy = r * Math.sin(a) * Math.cos(tilt);
-        const oz = r * Math.sin(a) * Math.sin(tilt);
-        const p = project(ox, oy, oz);
-        electrons.push({ x: cx + p.sx, y: cy + p.sy, depth: p.depth });
+    const electrons=[];
+    for (let s=0; s<shellCount; s++) {
+      const r=shellRadii[s], tilt=shellTilts[s];
+      for (let e=0; e<shells[s]; e++) {
+        const a=eAngles[s][e];
+        const p=project(r*Math.cos(a), r*Math.sin(a)*Math.cos(tilt), r*Math.sin(a)*Math.sin(tilt));
+        electrons.push({x:cx+p.sx, y:cy+p.sy, depth:p.depth});
       }
     }
-    // Back-to-front paint order
-    electrons.sort((a, b) => a.depth - b.depth);
-
-    for (const { x, y, depth } of electrons) {
-      const norm = (depth + maxR) / (2 * maxR); // 0=back, 1=front
-      const alpha = 0.25 + norm * 0.75;
-      const eSize = (1.8 + norm * 2.8) * zoomVal;
-
-      // Soft glow halo
-      const glow = ctx.createRadialGradient(x, y, 0, x, y, eSize * 4);
-      glow.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha * 0.4})`);
-      glow.addColorStop(1, 'transparent');
-      ctx.beginPath(); ctx.arc(x, y, eSize * 4, 0, Math.PI * 2);
-      ctx.fillStyle = glow; ctx.fill();
-
-      // Electron dot
-      ctx.beginPath(); ctx.arc(x, y, eSize, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
-      ctx.fill();
-
-      // Specular highlight
-      ctx.beginPath(); ctx.arc(x - eSize * 0.3, y - eSize * 0.3, eSize * 0.4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${alpha * 0.7})`;
-      ctx.fill();
+    electrons.sort((a,b)=>a.depth-b.depth);
+    for (const {x,y,depth} of electrons) {
+      const norm=(depth+maxR)/(2*maxR), alpha=0.25+norm*0.75, eSize=(1.8+norm*2.8)*zoomVal;
+      const glow=ctx.createRadialGradient(x,y,0,x,y,eSize*4);
+      glow.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha*0.4})`); glow.addColorStop(1,'transparent');
+      ctx.beginPath(); ctx.arc(x,y,eSize*4,0,Math.PI*2); ctx.fillStyle=glow; ctx.fill();
+      ctx.beginPath(); ctx.arc(x,y,eSize,0,Math.PI*2); ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(x-eSize*0.3,y-eSize*0.3,eSize*0.4,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${alpha*0.7})`; ctx.fill();
     }
 
-    // ── Nucleus ──
-    const nR = Math.max(9, Math.min(22, 7 + atomicNum * 0.07)) * zoomVal;
-
-    // Outer glow
-    const nucOut = ctx.createRadialGradient(cx, cy, 0, cx, cy, nR * 3.5);
-    nucOut.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.3)`);
-    nucOut.addColorStop(1, 'transparent');
-    ctx.beginPath(); ctx.arc(cx, cy, nR * 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = nucOut; ctx.fill();
-
-    // Sphere gradient
-    const nucG = ctx.createRadialGradient(cx - nR * 0.35, cy - nR * 0.35, nR * 0.05, cx, cy, nR);
-    nucG.addColorStop(0, 'rgba(255,255,255,0.97)');
-    nucG.addColorStop(0.2, `rgba(${Math.min(255,rgb[0]+70)},${Math.min(255,rgb[1]+70)},${Math.min(255,rgb[2]+70)},1)`);
-    nucG.addColorStop(0.65, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`);
-    nucG.addColorStop(1, `rgba(${Math.max(0,rgb[0]-55)},${Math.max(0,rgb[1]-55)},${Math.max(0,rgb[2]-55)},0.85)`);
-    ctx.beginPath(); ctx.arc(cx, cy, nR, 0, Math.PI * 2);
-    ctx.fillStyle = nucG; ctx.fill();
-
-    // Atomic number label on nucleus
-    if (nR >= 12) {
-      ctx.font = `bold ${Math.round(nR * 0.82)}px 'Inter', sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillText(atomicNum, cx, cy);
+    const nR=Math.max(9,Math.min(22,7+atomicNum*0.07))*zoomVal;
+    const nucOut=ctx.createRadialGradient(cx,cy,0,cx,cy,nR*3.5);
+    nucOut.addColorStop(0,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.3)`); nucOut.addColorStop(1,'transparent');
+    ctx.beginPath(); ctx.arc(cx,cy,nR*3.5,0,Math.PI*2); ctx.fillStyle=nucOut; ctx.fill();
+    const nucG=ctx.createRadialGradient(cx-nR*0.35,cy-nR*0.35,nR*0.05,cx,cy,nR);
+    nucG.addColorStop(0,'rgba(255,255,255,0.97)');
+    nucG.addColorStop(0.2,`rgba(${Math.min(255,rgb[0]+70)},${Math.min(255,rgb[1]+70)},${Math.min(255,rgb[2]+70)},1)`);
+    nucG.addColorStop(0.65,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`);
+    nucG.addColorStop(1,`rgba(${Math.max(0,rgb[0]-55)},${Math.max(0,rgb[1]-55)},${Math.max(0,rgb[2]-55)},0.85)`);
+    ctx.beginPath(); ctx.arc(cx,cy,nR,0,Math.PI*2); ctx.fillStyle=nucG; ctx.fill();
+    if (nR>=12) {
+      ctx.font=`bold ${Math.round(nR*0.82)}px 'Inter',sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillText(atomicNum,cx,cy);
     }
-
-    // Advance electrons
-    for (let s = 0; s < shellCount; s++)
-      for (let e = 0; e < shells[s]; e++)
-        eAngles[s][e] += speeds[s];
-
-    animFrame = requestAnimationFrame(frame);
+    for (let s=0; s<shellCount; s++) for (let e=0; e<shells[s]; e++) eAngles[s][e]+=speeds[s];
+    animFrame=requestAnimationFrame(frame);
   }
-
   frame();
 }
 
@@ -482,73 +421,42 @@ function drawBohr(atomicNum, color) {
 //  DRAG / ZOOM
 // ════════════════════════════════════════════════
 canvas.addEventListener('mousedown', e => { dragging=true; lastMX=e.clientX; lastMY=e.clientY; });
-window.addEventListener('mousemove', e => {
-  if (!dragging) return;
-  rotAngle  += (e.clientX - lastMX) * 0.012;
-  tiltAngle += (e.clientY - lastMY) * 0.012;
-  lastMX = e.clientX; lastMY = e.clientY;
-});
-window.addEventListener('mouseup', () => dragging = false);
-canvas.addEventListener('wheel', e => {
-  e.preventDefault();
-  zoomVal = Math.max(0.5, Math.min(2, zoomVal - e.deltaY * 0.0012));
-}, { passive: false });
-canvas.addEventListener('touchstart', e => { dragging=true; lastMX=e.touches[0].clientX; lastMY=e.touches[0].clientY; }, { passive: true });
-canvas.addEventListener('touchmove', e => {
-  if (!dragging) return;
-  rotAngle  += (e.touches[0].clientX - lastMX) * 0.012;
-  tiltAngle += (e.touches[0].clientY - lastMY) * 0.012;
-  lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
-  e.preventDefault();
-}, { passive: false });
-canvas.addEventListener('touchend', () => dragging = false);
-window.addEventListener('resize',()=>{
-  if(overlay.classList.contains('active')){
-    const r=canvasWrap.getBoundingClientRect();
-    canvas.width=r.width||340; canvas.height=r.height||360;
-  }
-});
+window.addEventListener('mousemove', e => { if(!dragging)return; rotAngle+=(e.clientX-lastMX)*0.012; tiltAngle+=(e.clientY-lastMY)*0.012; lastMX=e.clientX; lastMY=e.clientY; });
+window.addEventListener('mouseup', ()=>dragging=false);
+canvas.addEventListener('wheel', e => { e.preventDefault(); zoomVal=Math.max(0.5,Math.min(2,zoomVal-e.deltaY*0.0012)); }, {passive:false});
+canvas.addEventListener('touchstart', e=>{dragging=true;lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;},{passive:true});
+canvas.addEventListener('touchmove', e=>{if(!dragging)return;rotAngle+=(e.touches[0].clientX-lastMX)*0.012;tiltAngle+=(e.touches[0].clientY-lastMY)*0.012;lastMX=e.touches[0].clientX;lastMY=e.touches[0].clientY;e.preventDefault();},{passive:false});
+canvas.addEventListener('touchend',()=>dragging=false);
+window.addEventListener('resize',()=>{ if(overlay.classList.contains('active')){const r=canvasWrap.getBoundingClientRect();canvas.width=r.width||340;canvas.height=r.height||360;} });
 
 // ════════════════════════════════════════════════
 //  KNOW MORE PANEL
 // ════════════════════════════════════════════════
-const kmOverlay = document.getElementById('kmOverlay');
-const kmPanel   = document.getElementById('kmPanel');
-const kmClose   = document.getElementById('kmClose');
-const kmBody    = document.getElementById('kmBody');
-const kmSymbolEl= document.getElementById('kmSymbol');
-const kmNameEl  = document.getElementById('kmName');
-const kmSubEl   = document.getElementById('kmSub');
+const kmOverlay  = document.getElementById('kmOverlay');
+const kmPanel    = document.getElementById('kmPanel');
+const kmClose    = document.getElementById('kmClose');
+const kmBody     = document.getElementById('kmBody');
+const kmSymbolEl = document.getElementById('kmSymbol');
+const kmNameEl   = document.getElementById('kmName');
+const kmSubEl    = document.getElementById('kmSub');
 
-kmClose.addEventListener('click', () => kmOverlay.classList.remove('active'));
-kmOverlay.addEventListener('click', e => { if (e.target === kmOverlay) kmOverlay.classList.remove('active'); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') kmOverlay.classList.remove('active'); });
+kmClose.addEventListener('click', ()=>kmOverlay.classList.remove('active'));
+kmOverlay.addEventListener('click', e=>{ if(e.target===kmOverlay) kmOverlay.classList.remove('active'); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') kmOverlay.classList.remove('active'); });
 
-async function openKnowMore(atomicNum) {
-  const el = ELEMENTS.find(e => e.n === atomicNum);
+window.openKnowMore = async function(atomicNum) {
+  const el = ELEMENTS.find(e=>e.n===atomicNum);
   if (!el) return;
-
   const color = CATEGORIES[el.cat] || '#a78bfa';
   kmPanel.style.setProperty('--km-color', color);
-  kmPanel.style.borderColor = rga(color, 0.2);
-
-  kmSymbolEl.textContent  = el.sym;
-  kmSymbolEl.style.color  = color;
-  kmNameEl.textContent    = el.name;
-  kmSubEl.textContent     = `${el.cat} · No. ${el.n}`;
-
-  kmBody.innerHTML = `
-    <div class="km-loading" style="--km-color:${color}">
-      <div class="km-spinner"></div>
-      <span>Loading element data…</span>
-    </div>`;
-
+  kmPanel.style.borderColor = color;
+  kmSymbolEl.textContent=el.sym; kmSymbolEl.style.color=color;
+  kmNameEl.textContent=el.name;
+  kmSubEl.textContent=`${el.cat} · No. ${el.n}`;
+  kmBody.innerHTML=`<div class="km-loading" style="--km-color:${color}"><div class="km-spinner"></div><span>Loading element data…</span></div>`;
   kmOverlay.classList.add('active');
 
-  const occurrenceLabel = ['Actinide','Lanthanide'].includes(el.cat) || el.n >= 93
-    ? 'Synthesis'
-    : 'Occurrence';
-
+  const occurrenceLabel = ['Actinide','Lanthanide'].includes(el.cat)||el.n>=93 ? 'Synthesis' : 'Occurrence';
   const prompt = `You are a concise science encyclopedia. Respond ONLY with valid JSON, no markdown fences, no extra text.
 
 For the chemical element ${el.name} (symbol: ${el.sym}, atomic number: ${el.n}, category: ${el.cat}), return this exact JSON structure:
@@ -556,297 +464,118 @@ For the chemical element ${el.name} (symbol: ${el.sym}, atomic number: ${el.n}, 
 {
   "summary": "2–3 sentence overview of what ${el.name} is and why it matters",
   "discovery": "2–3 sentences on how and when ${el.name} was discovered, by whom, and any interesting context",
-  "${occurrenceLabel.toLowerCase()}": "2–3 sentences on ${el.n >= 93 ? `how ${el.name} is synthesized in labs or reactors` : `where ${el.name} is found in nature, its abundance, and main sources`}",
-  "properties": [
-    "One key physical or chemical property as a short sentence",
-    "Another notable property",
-    "A third distinct property"
-  ],
-  "uses": [
-    "One major real-world application as a short sentence",
-    "Another important use",
-    "A third application"
-  ]
+  "${occurrenceLabel.toLowerCase()}": "2–3 sentences on ${el.n>=93 ? `how ${el.name} is synthesized in labs or reactors` : `where ${el.name} is found in nature, its abundance, and main sources`}",
+  "properties": ["One key physical or chemical property as a short sentence","Another notable property","A third distinct property"],
+  "uses": ["One major real-world application as a short sentence","Another important use","A third application"]
 }`;
 
-  async function callAnthropicKm() {
-    const key = getStoredKey('anthropic'); if (!key) throw new Error('no key');
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true', 'x-api-key': key },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return JSON.parse(data.content.map(c => c.text || '').join('').replace(/```json|```/g, '').trim());
-  }
-
-  async function callDeepseekKm() {
-    const key = getStoredKey('deepseek'); if (!key) throw new Error('no key');
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
-  }
-
-  async function callGeminiKm() {
-    const key = getStoredKey('gemini'); if (!key) throw new Error('no key');
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
-    const data = await res.json();
-    if (!data.candidates) throw new Error(JSON.stringify(data));
-    return JSON.parse(data.candidates[0].content.parts.map(p => p.text || '').join('').replace(/```json|```/g, '').trim());
-  }
-
   function renderKmInfo(info) {
-    kmBody.innerHTML = `
+    kmBody.innerHTML=`
       <p class="km-summary">${info.summary}</p>
       <div class="km-section"><div class="km-section-title">Discovery</div><div class="km-section-body">${info.discovery}</div></div>
       <div class="km-section"><div class="km-section-title">${occurrenceLabel}</div><div class="km-section-body">${info[occurrenceLabel.toLowerCase()]}</div></div>
-      <div class="km-section"><div class="km-section-title">Properties</div><div class="km-bullets">${info.properties.map(p => `<div class="km-bullet">${p}</div>`).join('')}</div></div>
-      <div class="km-section"><div class="km-section-title">Uses</div><div class="km-bullets">${info.uses.map(u => `<div class="km-bullet">${u}</div>`).join('')}</div></div>
+      <div class="km-section"><div class="km-section-title">Properties</div><div class="km-bullets">${info.properties.map(p=>`<div class="km-bullet">${p}</div>`).join('')}</div></div>
+      <div class="km-section"><div class="km-section-title">Uses</div><div class="km-bullets">${info.uses.map(u=>`<div class="km-bullet">${u}</div>`).join('')}</div></div>
     `;
   }
 
   try {
-    let info;
-    try { info = await callAnthropicKm(); }
-    catch(e1) {
-      console.warn('KM: Anthropic failed →', e1.message);
-      try { info = await callDeepseekKm(); }
-      catch(e2) {
-        console.warn('KM: Deepseek failed →', e2.message);
-        info = await callGeminiKm();
-      }
+    const result = await callKnowMore(prompt, el.name);
+    if (result.source==='wikipedia') {
+      const d=result.data;
+      kmBody.innerHTML=`<p class="km-summary">${d.summary}</p><div class="km-section" style="margin-top:12px"><a href="${d.wikiUrl}" target="_blank" rel="noopener" style="color:${color};text-decoration:underline;font-weight:600;font-size:0.85rem">Read full article on Wikipedia →</a></div>`;
+    } else {
+      renderKmInfo(result.data);
     }
-    renderKmInfo(info);
-  } catch (err) {
-    kmBody.innerHTML = `
-      <div class="km-error">
-        Unable to load data for ${el.name}.<br>
-        <small style="opacity:0.6;font-size:0.7rem">${err.message}</small><br><br>
-        <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(el.name)}"
-           target="_blank" rel="noopener"
-           style="color:${color};text-decoration:underline;font-weight:600">
-          Read on Wikipedia →
-        </a>
-      </div>`;
+  } catch(err) {
+    kmBody.innerHTML=`<div class="km-error">Unable to load data for ${el.name}.<br><small style="opacity:0.6;font-size:0.7rem">${err.message}</small><br><br><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(el.name)}" target="_blank" rel="noopener" style="color:${color};text-decoration:underline;font-weight:600">Read on Wikipedia →</a></div>`;
   }
-}
+};
 
 // ════════════════════════════════════════════════
 //  MINI GAMES
 // ════════════════════════════════════════════════
-document.getElementById('btnMixer').addEventListener('click', () => {
-  document.getElementById('mixerOverlay').classList.add('active');
+document.getElementById('btnMixer').addEventListener('click',()=>document.getElementById('mixerOverlay').classList.add('active'));
+document.getElementById('btnQuiz').addEventListener('click',()=>document.getElementById('quizOverlay').classList.add('active'));
+['mixerClose','quizClose'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',()=>document.getElementById(id.replace('Close','Overlay')).classList.remove('active'));
 });
-document.getElementById('btnQuiz').addEventListener('click', () => {
-  document.getElementById('quizOverlay').classList.add('active');
-});
-
-// ── CLOSE HANDLERS ──
-['mixerClose','quizClose'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => {
-    document.getElementById(id.replace('Close','Overlay')).classList.remove('active');
-  });
-});
-document.getElementById('mixerOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('mixerOverlay'))
-    document.getElementById('mixerOverlay').classList.remove('active');
-});
-document.getElementById('quizOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('quizOverlay'))
-    document.getElementById('quizOverlay').classList.remove('active');
-});
+document.getElementById('mixerOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('mixerOverlay'))document.getElementById('mixerOverlay').classList.remove('active');});
+document.getElementById('quizOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('quizOverlay'))document.getElementById('quizOverlay').classList.remove('active');});
 
 // ══════════════════════════════════════
-//  ELEMENT MIXER (improved)
+//  ELEMENT MIXER
 // ══════════════════════════════════════
-let mixerSelected = [];
-const mixerHistory = [];
-const MAX_HISTORY  = 5;
-const HAZARD_ICONS = { 'acid':'\u2620\uFE0F','explosive':'\uD83D\uDCA5','toxic':'\u2620\uFE0F','radioactive':'\u2622\uFE0F','flammable':'\uD83D\uDD25','corrosive':'\u26A0\uFE0F','oxide':'\uD83C\uDF2C\uFE0F','salt':'\uD83E\uDDC2','alloy':'\u2699\uFE0F','polymer':'\uD83E\uDDEC','gas':'\uD83D\uDCA8' };
-function getHazardIcon(type) { if (!type) return '\uD83E\uDDEA'; const t=type.toLowerCase(); for (const [k,v] of Object.entries(HAZARD_ICONS)) { if (t.includes(k)) return v; } return '\uD83E\uDDEA'; }
+let mixerSelected=[], mixerHistory=[];
+const MAX_HISTORY=5;
+const HAZARD_ICONS={'acid':'\u2620\uFE0F','explosive':'\uD83D\uDCA5','toxic':'\u2620\uFE0F','radioactive':'\u2622\uFE0F','flammable':'\uD83D\uDD25','corrosive':'\u26A0\uFE0F','oxide':'\uD83C\uDF2C\uFE0F','salt':'\uD83E\uDDC2','alloy':'\u2699\uFE0F','polymer':'\uD83E\uDDEC','gas':'\uD83D\uDCA8'};
+function getHazardIcon(type){if(!type)return'\uD83E\uDDEA';const t=type.toLowerCase();for(const[k,v]of Object.entries(HAZARD_ICONS)){if(t.includes(k))return v;}return'\uD83E\uDDEA';}
 
-const mixerSearchEl   = document.getElementById('mixerSearch');
-const mixerDropdownEl = document.getElementById('mixerDropdown');
-const mixerSlotsEl    = document.getElementById('mixerSlots');
-const mixerSlotsWrap  = document.getElementById('mixerSlotsWrap');
-const mixBtn          = document.getElementById('mixBtn');
-const mixerResult     = document.getElementById('mixerResult');
-const mixerReactionAnim = document.getElementById('mixerReactionAnim');
+const mixerSearchEl=document.getElementById('mixerSearch');
+const mixerDropdownEl=document.getElementById('mixerDropdown');
+const mixerSlotsEl=document.getElementById('mixerSlots');
+const mixerSlotsWrap=document.getElementById('mixerSlotsWrap');
+const mixBtn=document.getElementById('mixBtn');
+const mixerResult=document.getElementById('mixerResult');
+const mixerReactionAnim=document.getElementById('mixerReactionAnim');
 
-function renderMixerSlots() {
-  if (mixerSelected.length === 0) {
-    mixerSlotsEl.innerHTML = '<span class="mixer-empty-hint">No elements selected yet\u2026</span>';
-    mixerSlotsWrap.classList.remove('has-items');
-  } else {
+function renderMixerSlots(){
+  if(mixerSelected.length===0){mixerSlotsEl.innerHTML='<span class="mixer-empty-hint">No elements selected yet\u2026</span>';mixerSlotsWrap.classList.remove('has-items');}
+  else{
     mixerSlotsWrap.classList.add('has-items');
-    mixerSlotsEl.innerHTML = mixerSelected.map((e,i) => {
-      const color = CATEGORIES[e.cat] || '#a78bfa';
-      return '<div class="mixer-slot" style="color:'+color+';border-color:'+color+'44;background:'+color+'11" data-i="'+i+'"><span>'+e.sym+'</span><span style="font-weight:400;color:var(--text-mid)">'+e.name+'</span><span class="mixer-slot-x">\u2715</span></div>';
-    }).join('');
-    mixerSlotsEl.querySelectorAll('.mixer-slot').forEach(s =>
-      s.addEventListener('click', () => {
-        mixerSelected.splice(parseInt(s.dataset.i),1);
-        renderMixerSlots();
-        mixerReactionAnim.style.display='none';
-        mixerResult.innerHTML='';
-      })
-    );
+    mixerSlotsEl.innerHTML=mixerSelected.map((e,i)=>{const c=CATEGORIES[e.cat]||'#a78bfa';return'<div class="mixer-slot" style="color:'+c+';border-color:'+c+'44;background:'+c+'11" data-i="'+i+'"><span>'+e.sym+'</span><span style="font-weight:400;color:var(--text-mid)">'+e.name+'</span><span class="mixer-slot-x">\u2715</span></div>';}).join('');
+    mixerSlotsEl.querySelectorAll('.mixer-slot').forEach(s=>s.addEventListener('click',()=>{mixerSelected.splice(parseInt(s.dataset.i),1);renderMixerSlots();mixerReactionAnim.style.display='none';mixerResult.innerHTML='';}));
   }
-  mixBtn.disabled = mixerSelected.length < 2;
+  mixBtn.disabled=mixerSelected.length<2;
 }
 
-mixerSearchEl.addEventListener('input', () => {
-  const q = mixerSearchEl.value.trim().toLowerCase();
-  mixerDropdownEl.innerHTML = '';
-  if (!q) return;
-  const matches = ELEMENTS.filter(e =>
-    (e.name.toLowerCase().includes(q) || e.sym.toLowerCase().startsWith(q)) &&
-    !mixerSelected.find(s => s.n === e.n)
-  ).slice(0,10);
-  matches.forEach(e => {
-    const color = CATEGORIES[e.cat] || '#a78bfa';
-    const d = document.createElement('div');
-    d.className = 'mixer-drop-item';
-    d.innerHTML = '<span class="mixer-drop-sym" style="color:'+color+'">'+e.sym+'</span><span>'+e.name+'</span><span style="margin-left:auto;font-size:0.72rem;color:var(--text-dim)">'+e.cat+'</span>';
-    d.addEventListener('click', () => {
-      if (mixerSelected.length >= 4) return;
-      mixerSelected.push(e);
-      renderMixerSlots();
-      mixerSearchEl.value=''; mixerDropdownEl.innerHTML='';
-      mixerResult.innerHTML=''; mixerReactionAnim.style.display='none';
-      mixerSearchEl.focus();
-    });
+mixerSearchEl.addEventListener('input',()=>{
+  const q=mixerSearchEl.value.trim().toLowerCase(); mixerDropdownEl.innerHTML='';
+  if(!q)return;
+  ELEMENTS.filter(e=>(e.name.toLowerCase().includes(q)||e.sym.toLowerCase().startsWith(q))&&!mixerSelected.find(s=>s.n===e.n)).slice(0,10).forEach(e=>{
+    const c=CATEGORIES[e.cat]||'#a78bfa', d=document.createElement('div');
+    d.className='mixer-drop-item';
+    d.innerHTML='<span class="mixer-drop-sym" style="color:'+c+'">'+e.sym+'</span><span>'+e.name+'</span><span style="margin-left:auto;font-size:0.72rem;color:var(--text-dim)">'+e.cat+'</span>';
+    d.addEventListener('click',()=>{if(mixerSelected.length>=4)return;mixerSelected.push(e);renderMixerSlots();mixerSearchEl.value='';mixerDropdownEl.innerHTML='';mixerResult.innerHTML='';mixerReactionAnim.style.display='none';mixerSearchEl.focus();});
     mixerDropdownEl.appendChild(d);
   });
 });
-document.addEventListener('click', e => { if (!e.target.closest('.mixer-search-wrap')) mixerDropdownEl.innerHTML=''; });
+document.addEventListener('click',e=>{if(!e.target.closest('.mixer-search-wrap'))mixerDropdownEl.innerHTML='';});
 
-function showReactionAnim() {
-  const colors = mixerSelected.map(e => CATEGORIES[e.cat]||'#a78bfa');
-  mixerReactionAnim.style.display='flex';
-  mixerReactionAnim.className='mixer-reaction-anim';
-  const parts = mixerSelected.map((e,i) =>
-    '<div class="mixer-anim-el"><span class="mixer-anim-sym" style="color:'+colors[i]+';animation-delay:'+(i*0.12)+'s">'+e.sym+'</span><span style="font-size:0.58rem;color:var(--text-dim)">'+e.name+'</span></div>'+(i<mixerSelected.length-1?'<span class="mixer-anim-plus">+</span>':'')
-  );
-  mixerReactionAnim.innerHTML = parts.join('') + '<span class="mixer-anim-arrow">\u2192</span><span style="font-size:1.3rem">?</span>';
+function showReactionAnim(){
+  const colors=mixerSelected.map(e=>CATEGORIES[e.cat]||'#a78bfa');
+  mixerReactionAnim.style.display='flex'; mixerReactionAnim.className='mixer-reaction-anim';
+  mixerReactionAnim.innerHTML=mixerSelected.map((e,i)=>'<div class="mixer-anim-el"><span class="mixer-anim-sym" style="color:'+colors[i]+';animation-delay:'+(i*0.12)+'s">'+e.sym+'</span><span style="font-size:0.58rem;color:var(--text-dim)">'+e.name+'</span></div>'+(i<mixerSelected.length-1?'<span class="mixer-anim-plus">+</span>':'')).join('')+'<span class="mixer-anim-arrow">\u2192</span><span style="font-size:1.3rem">?</span>';
 }
 
-function showMixerResult(info) {
-  const c = info.color||'#a78bfa';
-  mixerResult.innerHTML =
-    '<div class="mixer-result-inner" style="border-color:'+c+'44;background:'+c+'0d">' +
-      '<div class="mixer-result-header">' +
-        '<div class="mixer-result-compound" style="color:'+c+'">'+info.formula+'</div>' +
-        '<div class="mixer-hazard">'+getHazardIcon(info.type)+'</div>' +
-      '</div>' +
-      '<div class="mixer-result-name">'+info.name+'</div>' +
-      '<div class="mixer-result-desc">'+info.description+'</div>' +
-      '<div class="mixer-result-desc" style="margin-top:-4px"><strong style="color:'+c+'">Real world:</strong> '+info.realWorld+'</div>' +
-      '<div class="mixer-result-props">' +
-        '<div class="mixer-prop-tag" style="color:'+c+';border-color:'+c+'44;background:'+c+'11">'+info.type+'</div>' +
-        info.properties.map(p=>'<div class="mixer-prop-tag" style="color:var(--text-mid);border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04)">'+p+'</div>').join('') +
-      '</div>' +
-    '</div>';
+function showMixerResult(info){
+  const c=info.color||'#a78bfa';
+  mixerResult.innerHTML='<div class="mixer-result-inner" style="border-color:'+c+'44;background:'+c+'0d"><div class="mixer-result-header"><div class="mixer-result-compound" style="color:'+c+'">'+info.formula+'</div><div class="mixer-hazard">'+getHazardIcon(info.type)+'</div></div><div class="mixer-result-name">'+info.name+'</div><div class="mixer-result-desc">'+info.description+'</div><div class="mixer-result-desc" style="margin-top:-4px"><strong style="color:'+c+'">Real world:</strong> '+info.realWorld+'</div><div class="mixer-result-props"><div class="mixer-prop-tag" style="color:'+c+';border-color:'+c+'44;background:'+c+'11">'+info.type+'</div>'+info.properties.map(p=>'<div class="mixer-prop-tag" style="color:var(--text-mid);border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04)">'+p+'</div>').join('')+'</div></div>';
 }
 
-function renderMixerHistory() {
-  const cont = document.getElementById('mixerHistoryContainer');
-  if (!cont) return;
-  if (mixerHistory.length === 0) { cont.innerHTML=''; return; }
-  let rows = mixerHistory.map((h,idx) => {
-    const c = h.color||'#a78bfa';
-    return '<div class="mixer-history-item" data-idx="'+idx+'"><span class="mixer-history-formula" style="color:'+c+'">'+h.formula+'</span><span class="mixer-history-name">'+h.name+'</span><span class="mixer-history-els">'+h.elements+'</span><button class="mixer-history-delete" data-idx="'+idx+'" title="Remove">\u2715</button></div>';
-  }).join('');
-  cont.innerHTML = '<div class="mixer-history-wrap"><div class="mixer-history-header"><div class="mixer-history-title">Recent Reactions</div><button class="mixer-history-clear-all" id="mixerClearAll">Clear All</button></div><div class="mixer-history-list" id="mixerHistoryList">'+rows+'</div></div>';
-  cont.querySelectorAll('.mixer-history-delete').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const row = btn.closest('.mixer-history-item');
-      row.classList.add('removing');
-      setTimeout(() => { mixerHistory.splice(parseInt(btn.dataset.idx),1); renderMixerHistory(); }, 200);
-    });
-  });
-  cont.querySelectorAll('.mixer-history-item').forEach(el =>
-    el.addEventListener('click', () => showMixerResult(mixerHistory[parseInt(el.dataset.idx)]))
-  );
-  document.getElementById('mixerClearAll').addEventListener('click', () => {
-    const list = document.getElementById('mixerHistoryList');
-    list.style.transition='opacity 0.2s,transform 0.2s'; list.style.opacity='0'; list.style.transform='translateX(8px)';
-    setTimeout(() => { mixerHistory.length=0; renderMixerHistory(); }, 200);
-  });
+function renderMixerHistory(){
+  const cont=document.getElementById('mixerHistoryContainer'); if(!cont)return;
+  if(mixerHistory.length===0){cont.innerHTML='';return;}
+  cont.innerHTML='<div class="mixer-history-wrap"><div class="mixer-history-header"><div class="mixer-history-title">Recent Reactions</div><button class="mixer-history-clear-all" id="mixerClearAll">Clear All</button></div><div class="mixer-history-list" id="mixerHistoryList">'+mixerHistory.map((h,idx)=>{const c=h.color||'#a78bfa';return'<div class="mixer-history-item" data-idx="'+idx+'"><span class="mixer-history-formula" style="color:'+c+'">'+h.formula+'</span><span class="mixer-history-name">'+h.name+'</span><span class="mixer-history-els">'+h.elements+'</span><button class="mixer-history-delete" data-idx="'+idx+'" title="Remove">\u2715</button></div>';}).join('')+'</div></div>';
+  cont.querySelectorAll('.mixer-history-delete').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();btn.closest('.mixer-history-item').classList.add('removing');setTimeout(()=>{mixerHistory.splice(parseInt(btn.dataset.idx),1);renderMixerHistory();},200);}));
+  cont.querySelectorAll('.mixer-history-item').forEach(el=>el.addEventListener('click',()=>showMixerResult(mixerHistory[parseInt(el.dataset.idx)])));
+  document.getElementById('mixerClearAll').addEventListener('click',()=>{const list=document.getElementById('mixerHistoryList');list.style.transition='opacity 0.2s,transform 0.2s';list.style.opacity='0';list.style.transform='translateX(8px)';setTimeout(()=>{mixerHistory.length=0;renderMixerHistory();},200);});
 }
 
-mixBtn.addEventListener('click', async () => {
-  if (mixerSelected.length < 2) return;
+mixBtn.addEventListener('click',async()=>{
+  if(mixerSelected.length<2)return;
   mixBtn.disabled=true; mixBtn.textContent='Mixing\u2026';
   showReactionAnim();
   mixerResult.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:20px;justify-content:center;color:var(--text-dim);font-size:0.82rem"><div class="km-spinner" style="--km-color:#34d399"></div> Analyzing reaction\u2026</div>';
-  const names = mixerSelected.map(e=>e.name+' ('+e.sym+')').join(', ');
-  const prompt = 'You are a chemistry expert. A user is mixing these elements: '+names+'.\nRespond ONLY with valid JSON, no markdown, no preamble:\n{"formula":"Chemical formula","name":"Common name","type":"Category e.g. Oxide/Salt/Alloy/Acid/Polymer","description":"2 sentences.","properties":["p1","p2","p3"],"realWorld":"One sentence.","color":"hex color representing compound"}';
-
-  async function callAnthropicMix() {
-    const key = getStoredKey('anthropic'); if (!key) throw new Error('no key');
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true','x-api-key':key},
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return JSON.parse(data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim());
-  }
-
-  async function callDeepseekMix() {
-    const key = getStoredKey('deepseek'); if (!key) throw new Error('no key');
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return JSON.parse(data.choices[0].message.content.replace(/```json|```/g,'').trim());
-  }
-
-  async function callGeminiMix() {
-    const key = getStoredKey('gemini'); if (!key) throw new Error('no key');
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
-    const data = await res.json();
-    if (!data.candidates) throw new Error(JSON.stringify(data));
-    return JSON.parse(data.candidates[0].content.parts.map(p=>p.text||'').join('').replace(/```json|```/g,'').trim());
-  }
-
-  try {
-    let info;
-    try { info = await callAnthropicMix(); }
-    catch(e1) {
-      console.warn('Mixer: Anthropic failed →', e1.message);
-      try { info = await callDeepseekMix(); }
-      catch(e2) {
-        console.warn('Mixer: Deepseek failed →', e2.message);
-        info = await callGeminiMix();
-      }
-    }
-    info.elements = mixerSelected.map(e=>e.sym).join('+');
-    showMixerResult(info);
-    mixerHistory.unshift(info);
-    if (mixerHistory.length > MAX_HISTORY) mixerHistory.pop();
+  const names=mixerSelected.map(e=>e.name+' ('+e.sym+')').join(', ');
+  const prompt='You are a chemistry expert. A user is mixing these elements: '+names+'.\nRespond ONLY with valid JSON, no markdown, no preamble:\n{"formula":"Chemical formula","name":"Common name","type":"Category e.g. Oxide/Salt/Alloy/Acid/Polymer","description":"2 sentences.","properties":["p1","p2","p3"],"realWorld":"One sentence.","color":"hex color representing compound"}';
+  try{
+    const info=await callAI(prompt);
+    info.elements=mixerSelected.map(e=>e.sym).join('+');
+    showMixerResult(info); mixerHistory.unshift(info);
+    if(mixerHistory.length>MAX_HISTORY)mixerHistory.pop();
     renderMixerHistory();
-  } catch(err) {
+  }catch(err){
     console.error(err);
     mixerResult.innerHTML='<div class="km-error">Could not determine the reaction.<br><small style="opacity:0.6;font-size:0.7rem">'+err.message+'</small></div>';
     mixerReactionAnim.style.display='none';
@@ -855,150 +584,87 @@ mixBtn.addEventListener('click', async () => {
 });
 
 // ══════════════════════════════════════
-//  QUIZ GAME (improved)
+//  QUIZ GAME
 // ══════════════════════════════════════
-let quizMode='easy', quizQuestions=[], quizCurrent=0, quizScores=[], quizStreak=0;
-let quizTimerInterval=null, quizTimeLeft=0;
+let quizMode='easy',quizQuestions=[],quizCurrent=0,quizScores=[],quizStreak=0;
+let quizTimerInterval=null,quizTimeLeft=0;
 let quizBestScore={easy:0,medium:0,hard:0};
 const QUIZ_TIME={easy:20,medium:15,hard:10};
 const KEY_LABELS=['A','B','C','D'];
 
-function bindQuizModeBtns() {
-  document.querySelectorAll('.quiz-mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.quiz-mode-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active'); quizMode=btn.dataset.mode;
-    });
+function bindQuizModeBtns(){
+  document.querySelectorAll('.quiz-mode-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{document.querySelectorAll('.quiz-mode-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');quizMode=btn.dataset.mode;});
   });
 }
 bindQuizModeBtns();
-document.getElementById('quizStartBtn').addEventListener('click', startQuiz);
+document.getElementById('quizStartBtn').addEventListener('click',startQuiz);
 
-async function startQuiz() {
-  quizScores=[]; quizCurrent=0; quizStreak=0;
-  clearInterval(quizTimerInterval);
+async function startQuiz(){
+  quizScores=[];quizCurrent=0;quizStreak=0;clearInterval(quizTimerInterval);
   const quizBody=document.getElementById('quizBody');
   quizBody.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:32px 0;justify-content:center;color:var(--text-dim);font-size:0.82rem"><div class="km-spinner" style="--km-color:#818cf8"></div> Generating quiz\u2026</div>';
-  const sampleEls=[...ELEMENTS].sort(()=>Math.random()-0.5).slice(0,18).map(e=>
-    e.name+' ('+e.sym+', Z='+e.n+', '+e.cat+', melts '+e.melt+'\u00b0C, boils '+e.boil+'\u00b0C, density '+e.density+', discovered '+e.year+' by '+e.discoveredBy+')'
-  ).join('; ');
+  const sampleEls=[...ELEMENTS].sort(()=>Math.random()-0.5).slice(0,18).map(e=>e.name+' ('+e.sym+', Z='+e.n+', '+e.cat+', melts '+e.melt+'\u00b0C, boils '+e.boil+'\u00b0C, density '+e.density+', discovered '+e.year+' by '+e.discoveredBy+')').join('; ');
   const difficulties={easy:'simple symbol to name, atomic number, or category',medium:'properties, discovery years, melting/boiling points',hard:'electron configuration, density comparisons, discoverers'};
   const prompt='You are a periodic table quiz master. Generate exactly 5 multiple-choice questions at '+quizMode+' difficulty ('+difficulties[quizMode]+').\nUse these elements: '+sampleEls+'\nRespond ONLY with valid JSON array, no markdown:\n[{"question":"...","options":["A","B","C","D"],"answer":0,"explanation":"1-2 sentences."}]\n"answer" is 0-based index. Make all 4 options realistic.';
-
-  async function callAnthropicQuiz() {
-    const key = getStoredKey('anthropic'); if (!key) throw new Error('no key');
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true','x-api-key':key},
-      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:1400,messages:[{role:'user',content:prompt}]})
-    });
-    const data=await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return JSON.parse(data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim());
-  }
-
-  async function callDeepseekQuiz() {
-    const key = getStoredKey('deepseek'); if (!key) throw new Error('no key');
-    const res=await fetch('https://api.deepseek.com/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'deepseek-chat',max_tokens:1400,messages:[{role:'user',content:prompt}]})
-    });
-    const data=await res.json();
-    if (data.error) throw new Error(data.error.message);
-    return JSON.parse(data.choices[0].message.content.replace(/```json|```/g,'').trim());
-  }
-
-  async function callGeminiQuiz() {
-    const key = getStoredKey('gemini'); if (!key) throw new Error('no key');
-    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-    });
-    const data=await res.json();
-    if (!data.candidates) throw new Error(JSON.stringify(data));
-    return JSON.parse(data.candidates[0].content.parts.map(p=>p.text||'').join('').replace(/```json|```/g,'').trim());
-  }
-
-  try {
-    let questions;
-    try { questions = await callAnthropicQuiz(); }
-    catch(e1) {
-      console.warn('Quiz: Anthropic failed →', e1.message);
-      try { questions = await callDeepseekQuiz(); }
-      catch(e2) {
-        console.warn('Quiz: Deepseek failed →', e2.message);
-        questions = await callGeminiQuiz();
-      }
-    }
-    quizQuestions=questions;
+  try{
+    quizQuestions=await callAI(prompt);
     renderQuizQuestion();
-  } catch(err) {
+  }catch(err){
     console.error(err);
     quizBody.innerHTML='<div class="km-error">Could not generate quiz.<br><small style="opacity:0.6;font-size:0.7rem">'+err.message+'</small></div>';
   }
 }
 
-function renderQuizQuestion() {
+function renderQuizQuestion(){
   clearInterval(quizTimerInterval);
   const quizBody=document.getElementById('quizBody');
-  if (quizCurrent>=quizQuestions.length) { renderQuizScore(); return; }
-  const q=quizQuestions[quizCurrent], total=quizQuestions.length;
-  const timeLimit=QUIZ_TIME[quizMode]||15; quizTimeLeft=timeLimit;
-  const pips=Array.from({length:total},(_,i)=>{
-    let cls=i<quizCurrent?(quizScores[i]?'correct':'wrong'):i===quizCurrent?'current':'';
-    return '<div class="quiz-pip '+cls+'"></div>';
-  }).join('');
+  if(quizCurrent>=quizQuestions.length){renderQuizScore();return;}
+  const q=quizQuestions[quizCurrent],total=quizQuestions.length,timeLimit=QUIZ_TIME[quizMode]||15;
+  quizTimeLeft=timeLimit;
+  const pips=Array.from({length:total},(_,i)=>'<div class="quiz-pip '+(i<quizCurrent?(quizScores[i]?'correct':'wrong'):i===quizCurrent?'current':'')+'"></div>').join('');
   const opts=q.options.map((opt,i)=>'<button class="quiz-option" data-i="'+i+'"><span class="quiz-option-key">'+KEY_LABELS[i]+'</span>'+opt+'</button>').join('');
   quizBody.innerHTML='<div class="quiz-progress">'+pips+'</div><div class="quiz-question-wrap"><div class="quiz-q-header"><div style="display:flex;align-items:center;gap:10px;"><div class="quiz-q-num">Question '+(quizCurrent+1)+' / '+total+'</div><div class="quiz-streak'+(quizStreak>=2?' visible':'')+'" id="quizStreak"><span>\uD83D\uDD25</span>'+quizStreak+' streak</div></div><div class="quiz-timer-wrap"><div class="quiz-timer-bar-wrap"><div class="quiz-timer-bar" id="quizTimerBar" style="width:100%"></div></div><div class="quiz-timer-label" id="quizTimerLabel">'+timeLimit+'s</div></div></div><div class="quiz-question">'+q.question+'</div><div class="quiz-options" id="quizOptions">'+opts+'</div><div class="quiz-feedback" id="quizFeedback" style="display:none"></div></div>';
   document.querySelectorAll('.quiz-option').forEach(btn=>btn.addEventListener('click',()=>answerQuiz(parseInt(btn.dataset.i))));
-  const keyHandler=e=>{ const idx=KEY_LABELS.indexOf(e.key.toUpperCase()); if(idx!==-1&&document.querySelectorAll('.quiz-option:not(:disabled)').length>0) answerQuiz(idx); };
-  document.addEventListener('keydown',keyHandler);
-  quizBody._keyHandler=keyHandler;
+  const keyHandler=e=>{const idx=KEY_LABELS.indexOf(e.key.toUpperCase());if(idx!==-1&&document.querySelectorAll('.quiz-option:not(:disabled)').length>0)answerQuiz(idx);};
+  document.addEventListener('keydown',keyHandler); quizBody._keyHandler=keyHandler;
   quizTimerInterval=setInterval(()=>{
     quizTimeLeft--;
-    const bar=document.getElementById('quizTimerBar'), label=document.getElementById('quizTimerLabel');
-    if(bar){bar.style.width=((quizTimeLeft/timeLimit)*100)+'%'; bar.style.background=quizTimeLeft<=5?'#f87171':'#818cf8';}
-    if(label){label.textContent=quizTimeLeft+'s'; label.className='quiz-timer-label'+(quizTimeLeft<=5?' urgent':'');}
-    if(quizTimeLeft<=0){clearInterval(quizTimerInterval); answerQuiz(-1);}
+    const bar=document.getElementById('quizTimerBar'),label=document.getElementById('quizTimerLabel');
+    if(bar){bar.style.width=((quizTimeLeft/timeLimit)*100)+'%';bar.style.background=quizTimeLeft<=5?'#f87171':'#818cf8';}
+    if(label){label.textContent=quizTimeLeft+'s';label.className='quiz-timer-label'+(quizTimeLeft<=5?' urgent':'');}
+    if(quizTimeLeft<=0){clearInterval(quizTimerInterval);answerQuiz(-1);}
   },1000);
 }
 
-function answerQuiz(chosen) {
+function answerQuiz(chosen){
   clearInterval(quizTimerInterval);
   const quizBody=document.getElementById('quizBody');
-  if(quizBody._keyHandler){document.removeEventListener('keydown',quizBody._keyHandler); quizBody._keyHandler=null;}
-  const q=quizQuestions[quizCurrent], correct=chosen===q.answer;
-  quizScores.push(correct);
-  if(correct) quizStreak++; else quizStreak=0;
-  document.querySelectorAll('.quiz-option').forEach((btn,i)=>{
-    btn.disabled=true;
-    if(i===q.answer) btn.classList.add('correct');
-    else if(i===chosen&&!correct) btn.classList.add('wrong');
-  });
+  if(quizBody._keyHandler){document.removeEventListener('keydown',quizBody._keyHandler);quizBody._keyHandler=null;}
+  const q=quizQuestions[quizCurrent],correct=chosen===q.answer;
+  quizScores.push(correct); if(correct)quizStreak++;else quizStreak=0;
+  document.querySelectorAll('.quiz-option').forEach((btn,i)=>{btn.disabled=true;if(i===q.answer)btn.classList.add('correct');else if(i===chosen&&!correct)btn.classList.add('wrong');});
   const fb=document.getElementById('quizFeedback');
   if(fb){
-    fb.style.display='block'; fb.style.borderColor=correct?'rgba(52,211,153,0.3)':'rgba(248,113,113,0.3)';
-    const lbl=chosen===-1?"⏱ Time's up!":correct?'✓ Correct!':'✗ Incorrect.';
-    fb.innerHTML='<span style="font-weight:700;color:'+(correct?'#34d399':'#f87171')+'">'+lbl+'</span> '+q.explanation;
-    const hint=document.createElement('div'); hint.className='quiz-next-hint';
+    fb.style.display='block';fb.style.borderColor=correct?'rgba(52,211,153,0.3)':'rgba(248,113,113,0.3)';
+    fb.innerHTML='<span style="font-weight:700;color:'+(correct?'#34d399':'#f87171')+'">'+(chosen===-1?"⏱ Time's up!":correct?'✓ Correct!':'✗ Incorrect.')+'</span> '+q.explanation;
+    const hint=document.createElement('div');hint.className='quiz-next-hint';
     hint.textContent=quizCurrent<quizQuestions.length-1?'Next question in 2s\u2026':'Results in 2s\u2026';
     fb.insertAdjacentElement('afterend',hint);
   }
-  setTimeout(()=>{ quizCurrent++; renderQuizQuestion(); },2000);
+  setTimeout(()=>{quizCurrent++;renderQuizQuestion();},2000);
 }
 
-function renderQuizScore() {
+function renderQuizScore(){
   clearInterval(quizTimerInterval);
   const quizBody=document.getElementById('quizBody');
-  const score=quizScores.filter(Boolean).length, total=quizQuestions.length;
-  const pct=Math.round((score/total)*100), color=pct>=80?'#34d399':pct>=50?'#facc15':'#f87171';
+  const score=quizScores.filter(Boolean).length,total=quizQuestions.length,pct=Math.round((score/total)*100);
+  const color=pct>=80?'#34d399':pct>=50?'#facc15':'#f87171';
   const msgs={100:"Perfect score! You're a chemistry genius! \uD83C\uDFC6",80:"Excellent work! Nearly flawless. \uD83C\uDF89",60:"Good effort! Keep exploring the table. \uD83D\uDCDA",40:"Not bad \u2014 there's room to grow. \uD83E\uDDEA",0:"Keep exploring the periodic table! \uD83D\uDD2C"};
   const tier=[100,80,60,40,0].find(t=>pct>=t);
-  const isNew=pct>quizBestScore[quizMode]; if(isNew) quizBestScore[quizMode]=pct;
+  const isNew=pct>quizBestScore[quizMode];if(isNew)quizBestScore[quizMode]=pct;
   const maxStreak=quizScores.reduce((acc,v)=>v?{...acc,cur:acc.cur+1,max:Math.max(acc.max,acc.cur+1)}:{...acc,cur:0},{cur:0,max:0}).max;
-  const r=38, circ=2*Math.PI*r, dash=circ-(pct/100)*circ;
+  const r=38,circ=2*Math.PI*r,dash=circ-(pct/100)*circ;
   const pips=quizScores.map(s=>'<div class="quiz-pip '+(s?'correct':'wrong')+'"></div>').join('');
   const breakdown='<div class="quiz-breakdown"><div class="quiz-breakdown-item"><div class="quiz-breakdown-val" style="color:#34d399">'+score+'</div><div class="quiz-breakdown-lbl">Correct</div></div><div class="quiz-breakdown-item"><div class="quiz-breakdown-val" style="color:#f87171">'+(total-score)+'</div><div class="quiz-breakdown-lbl">Missed</div></div><div class="quiz-breakdown-item"><div class="quiz-breakdown-val" style="color:#facc15">'+maxStreak+'</div><div class="quiz-breakdown-lbl">Best Streak</div></div></div>';
   quizBody.innerHTML='<div class="quiz-progress">'+pips+'</div><div class="quiz-score-wrap"><div class="quiz-score-ring"><svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="'+r+'" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="6"/><circle cx="50" cy="50" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="6" stroke-dasharray="'+circ+'" stroke-dashoffset="'+dash+'" stroke-linecap="round" style="transition:stroke-dashoffset 0.8s ease"/></svg><div class="quiz-score-ring-text"><div class="quiz-score-big" style="color:'+color+'">'+score+'/'+total+'</div><div class="quiz-score-sub">'+pct+'%</div></div></div>'+(isNew?'<div class="quiz-best-badge">\uD83C\uDFC5 New best for '+quizMode+'!</div>':'')+'<div class="quiz-score-msg">'+msgs[tier]+'</div>'+breakdown+'</div><button class="mix-btn" id="playAgainBtn" style="background:linear-gradient(135deg,#818cf8,#a78bfa)">Play Again \u2192</button>';
@@ -1007,28 +673,4 @@ function renderQuizScore() {
     bindQuizModeBtns();
     document.getElementById('quizStartBtn').addEventListener('click',startQuiz);
   });
-}
-
-// ════════════════════════════════════════════════
-//  API KEYS — paste your keys here
-// ════════════════════════════════════════════════
-const API_KEYS = {
-  // Primary — Anthropic Claude (console.anthropic.com)
-  anthropic: '',
-
-  // Fallback 1 — Deepseek (platform.deepseek.com)
-  deepseek: '',
-
-  // Fallback 2 — Gemini (aistudio.google.com)
-  gemini: '',
-
-  // NVIDIA fallbacks — add up to 3 keys (build.nvidia.com → Get API Key)
-  // nvidia1: 'nvapi-YOUR-FIRST-KEY-HERE',
-  // nvidia2: 'nvapi-YOUR-SECOND-KEY-HERE',
-  // nvidia3: 'nvapi-YOUR-THIRD-KEY-HERE',
-};
-// ════════════════════════════════════════════════
-
-function getStoredKey(provider) {
-  return API_KEYS[provider] || '';
 }
