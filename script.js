@@ -1,242 +1,941 @@
-const CAT = {
-  AK: 'alkali', AE: 'alkaline', LA: 'lanthanide', AC: 'actinide',
-  TM: 'transition', PT: 'post-transition', ML: 'metalloid',
-  NM: 'nonmetal', HA: 'halogen', NG: 'noble', UK: 'unknown'
+// ════════════════════════════════════════════════
+//  API KEYS — paste your keys here
+//  Kimi:     https://platform.moonshot.ai/console/api-keys
+//  DeepSeek: https://platform.deepseek.com/api_keys
+// ════════════════════════════════════════════════
+const API_KEYS = {
+  kimi: 'sk-g4rnnvfvTTN0C2fw1erYebbG6yxovnqUMCaPN9qnkveDJ8Rg', // paste your Moonshot AI key here (primary)
+  deepseek: 'sk-881f94fd1b6b46b69d71023b620e5c81', // paste your DeepSeek key here (fallback)
 };
 
-const catColors = {
-  alkali: '#ff4757', alkaline: '#ff6348', lanthanide: '#eccc68', actinide: '#ffa502',
-  transition: '#2ed573', 'post-transition': '#1e90ff', metalloid: '#a29bfe',
-  nonmetal: '#fd79a8', halogen: '#e17055', noble: '#00cec9', unknown: '#636e72'
+const PROVIDERS = {
+  kimi: {
+    url: 'https://api.moonshot.cn/v1/chat/completions',
+    model: 'moonshot-v1-8k',
+  },
+  deepseek: {
+    url: 'https://api.deepseek.com/chat/completions',
+    model: 'deepseek-chat',
+  },
 };
+// ════════════════════════════════════════════════
 
-// [atomic#, symbol, name, mass, category, col, row, history, uses]
-const elements = [
-  [1,'H','Hydrogen',1.008,CAT.NM,1,1,'Hydrogen was first produced artificially by Henry Cavendish in 1766, who called it "inflammable air." Antoine Lavoisier later named it hydrogen in 1783, from Greek meaning "water-former."','Used in fuel cells, petroleum refining, ammonia production for fertilizers, rocket fuel, and as a clean energy carrier for the future.'],
-  [2,'He','Helium',4.003,CAT.NG,18,1,'Helium was first detected in the solar spectrum in 1868 by Pierre Janssen during a solar eclipse. Its name comes from Helios, the Greek god of the Sun. It wasn\'t isolated on Earth until 1895 by William Ramsay.','Used in balloons and airships, MRI cooling, arc welding, leak detection, and as a cryogenic coolant for superconducting magnets.'],
-  [3,'Li','Lithium',6.941,CAT.AK,1,2,'Lithium was discovered in 1817 by Johan August Arfwedson while analyzing petalite ore. Its name derives from the Greek "lithos" meaning stone. It was the third element discovered in the 19th century.','Powers rechargeable batteries in phones and EVs, used in mood-stabilizing medications, nuclear fusion research, glass ceramics, and lubricating greases.'],
-  [4,'Be','Beryllium',9.012,CAT.AE,2,2,'Beryllium was discovered in 1798 by Louis-Nicolas Vauquelin in beryl and emerald minerals. It was independently isolated in 1828 by Friedrich Wöhler and Antoine Bussy. Named after the mineral beryl.','Used in aerospace structures, X-ray windows, nuclear reactors as a neutron reflector, high-performance audio speakers, and precision instruments.'],
-  [5,'B','Boron',10.811,CAT.ML,13,2,'Boron was first isolated in 1808 by Humphry Davy, Joseph-Louis Gay-Lussac, and Louis-Jacques Thénard. Named after borax, from which it was extracted. It\'s the only metalloid in group 13.','Used in borosilicate glass (Pyrex), fiberglass insulation, high-strength composites, nuclear reactor control rods, and borax detergents and cleaning products.'],
-  [6,'C','Carbon',12.011,CAT.NM,14,2,'Carbon has been known since antiquity in the forms of charcoal and soot. Antoine Lavoisier proved it was an element in 1789. Diamond and graphite were identified as carbon forms in the 18th century. The name comes from Latin "carbo" meaning coal.','The basis of all organic life; used in steel production, pencil graphite, carbon fiber composites, diamond tools, activated carbon filters, and emerging graphene electronics.'],
-  [7,'N','Nitrogen',14.007,CAT.NM,15,2,'Nitrogen was discovered in 1772 by Daniel Rutherford, who called it "noxious air." Lavoisier named it azote (lifeless) but the name nitrogen (nitro-forming) prevailed. It makes up 78% of Earth\'s atmosphere.','Used in fertilizers (Haber-Bosch process), liquid nitrogen refrigerant, food preservation, electronics manufacturing, and as an inert atmosphere for sensitive processes.'],
-  [8,'O','Oxygen',15.999,CAT.NM,16,2,'Oxygen was discovered independently by Carl Wilhelm Scheele in 1772 and Joseph Priestley in 1774. Lavoisier recognized it as an element and named it from Greek meaning "acid-former." It\'s essential for respiration.','Essential for all aerobic life; used in medical oxygen therapy, steel and metal smelting, rocket propellant, water treatment, and chemical manufacturing.'],
-  [9,'F','Fluorine',18.998,CAT.HA,17,2,'Fluorine\'s existence was predicted from hydrofluoric acid studies, but isolating it was so dangerous it killed or injured several chemists. Henri Moissan finally succeeded in 1886 using electrolysis, earning the Nobel Prize.','Used in toothpaste and water fluoridation, Teflon non-stick coatings, refrigerants (Freon), uranium enrichment, and production of semiconductors.'],
-  [10,'Ne','Neon',20.180,CAT.NG,18,2,'Neon was discovered in 1898 by William Ramsay and Morris Travers through fractional distillation of liquid air. Its name comes from the Greek "neos" meaning new. It was the second noble gas to be discovered.','Famous for neon signs and lighting, used in high-voltage indicators, TV tubes, wave meter tubes, helium-neon lasers, and cryogenic refrigerants.'],
-  [11,'Na','Sodium',22.990,CAT.AK,1,3,'Sodium was first isolated in 1807 by Humphry Davy using electrolysis of molten sodium hydroxide. Its name comes from the English "soda," while its symbol Na is from the Latin "natrium."','Essential electrolyte in biology; used in table salt, baking soda, soap manufacturing, street lamps (sodium vapor), and nuclear reactor coolant.'],
-  [12,'Mg','Magnesium',24.305,CAT.AE,2,3,'Magnesium was recognized as an element by Joseph Black in 1755, but only isolated in 1808 by Humphry Davy. Named after Magnesia, a district in Thessaly, Greece. It burns with a brilliant white flame.','Used in lightweight alloys for aerospace and cars, fireworks and flares, dietary supplements, antacids, and as a refractory material in furnaces.'],
-  [13,'Al','Aluminium',26.982,CAT.PT,13,3,'Aluminium was predicted by Antoine Lavoisier and first isolated in 1825 by Hans Christian Ørsted. Once rarer than gold, its price plummeted after Charles Hall and Paul Héroult independently developed electrolytic production in 1886.','The most abundant metal in Earth\'s crust; used in aircraft and packaging foil, building construction, beverage cans, electrical wiring, and kitchen cookware.'],
-  [14,'Si','Silicon',28.086,CAT.ML,14,3,'Silicon was first isolated in 1823 by Jöns Jacob Berzelius. Named after the Latin "silex" for flint. Though abundant in Earth\'s crust as silica (sand), pure silicon was difficult to obtain until modern methods.','The foundation of modern electronics; used in computer chips and solar cells, glass and ceramics, silicone sealants, fiber optics, and semiconductor devices.'],
-  [15,'P','Phosphorus',30.974,CAT.NM,15,3,'Phosphorus was discovered in 1669 by Hennig Brand, who isolated it from urine while searching for the philosopher\'s stone. It glows in the dark due to oxidation — making it the first chemiluminescent substance studied.','Essential in DNA and cell membranes; used in fertilizers (critical for agriculture), detergents, matches and fireworks, flame retardants, and steel production.'],
-  [16,'S','Sulfur',32.06,CAT.NM,16,3,'Sulfur has been known since ancient times, mentioned in the Bible as "brimstone." Lavoisier established it as an element in 1789. Volcanic regions provided early supplies; today it\'s largely recovered from petroleum refining.','Used in sulfuric acid production (the world\'s most produced industrial chemical), rubber vulcanization, fertilizers, gunpowder, and fungicides for crops.'],
-  [17,'Cl','Chlorine',35.45,CAT.HA,17,3,'Chlorine was discovered in 1774 by Carl Wilhelm Scheele and recognized as an element in 1808 by Humphry Davy. Its name comes from the Greek "chloros" meaning pale green. It was used as a poison gas in WWI.','Used in water purification and disinfection, PVC plastic production, bleaching paper and textiles, pharmaceuticals, and chemical manufacturing.'],
-  [18,'Ar','Argon',39.948,CAT.NG,18,3,'Argon was discovered in 1894 by Lord Rayleigh and William Ramsay by removing nitrogen and oxygen from air. Its name comes from the Greek "argos" meaning inactive, reflecting its unreactive nature.','Used in welding as a shielding gas, filling incandescent and fluorescent light bulbs, preserving historical documents, and as an insulating gas in double-pane windows.'],
-  [19,'K','Potassium',39.098,CAT.AK,1,4,'Potassium was first isolated in 1807 by Humphry Davy using electrolysis, the first metal isolated this way. Its symbol K comes from the Latin "kalium." It was named from English "potash" (plant ash soaked in water).','Essential nutrient for plant and human health; used in fertilizers, soaps and detergents, food preservation (potassium nitrate), and gunpowder production.'],
-  [20,'Ca','Calcium',40.078,CAT.AE,2,4,'Calcium compounds have been used since antiquity (limestone, chalk), but the element was first isolated in 1808 by Humphry Davy via electrolysis. Its name comes from the Latin "calx" meaning lime.','Most abundant mineral in the human body; used in cement and concrete, steel refining, paper production, antacids and supplements, and water treatment.'],
-  [21,'Sc','Scandium',44.956,CAT.TM,3,4,'Scandium was predicted by Dmitri Mendeleev in 1871 and discovered in 1879 by Lars Fredrik Nilson in the minerals euxenite and gadolinite. Named after Scandinavia, confirming Mendeleev\'s predictions.','Used in aluminum-scandium alloys for aerospace and sports equipment, high-intensity metal halide lamps, and solid oxide fuel cells.'],
-  [22,'Ti','Titanium',47.867,CAT.TM,4,4,'Titanium was discovered in 1791 by William Gregor and independently by Martin Heinrich Klaproth in 1795, who named it after the Titans of Greek mythology. Pure titanium wasn\'t produced until 1910.','Used in aerospace alloys, medical implants and prosthetics, bicycle frames, white paint pigment (TiO₂), and architectural cladding for its strength and corrosion resistance.'],
-  [23,'V','Vanadium',50.942,CAT.TM,5,4,'Vanadium was discovered in 1801 by Andrés Manuel del Río but he was convinced his discovery was chromium. It was rediscovered in 1830 by Nils Gabriel Sefström and named after Vanadís (Norse goddess Freya).','Used in high-strength steel alloys for tools and springs, vanadium flow batteries for grid energy storage, titanium alloys for jet engines, and catalysts for sulfuric acid.'],
-  [24,'Cr','Chromium',51.996,CAT.TM,6,4,'Chromium was discovered in 1797 by Louis-Nicolas Vauquelin in the mineral crocoite. Named from the Greek "chroma" meaning color, due to the vivid colors of its compounds. It gives rubies their red color.','Used in stainless steel production, chrome plating for corrosion resistance and appearance, pigments (chrome green, yellow), tanning leather, and catalysts.'],
-  [25,'Mn','Manganese',54.938,CAT.TM,7,4,'Manganese was isolated in 1774 by Johan Gottlieb Gahn, though its ores had been used in glass-making since ancient times. Named after Magnesia, a region of Greece. It\'s related to the word "magnet."','Essential for steel production (removes sulfur and oxygen), dry cell batteries (MnO₂), aluminum alloy strengthening, fertilizers, and water purification.'],
-  [26,'Fe','Iron',55.845,CAT.TM,8,4,'Iron has been worked since at least 3000 BCE, defining the "Iron Age." The Egyptians called it "metal from heaven" (likely from meteorites). Its symbol Fe comes from the Latin "ferrum."','The backbone of industrial civilization; used in steel for construction, vehicles, and machinery; cast iron cookware; magnets; and hemoglobin for oxygen transport in blood.'],
-  [27,'Co','Cobalt',58.933,CAT.TM,9,4,'Cobalt was discovered in 1735 by Georg Brandt, who showed it was distinct from bismuth. Named after "kobold," German for goblin, because miners blamed troublesome cobalt ores for making copper smelting fail.','Used in lithium-ion battery cathodes (phones, EVs), blue pigments for glass and ceramics, magnetic alloys, jet engine superalloys, and cancer radiation therapy (Co-60).'],
-  [28,'Ni','Nickel',58.693,CAT.TM,10,4,'Nickel was discovered in 1751 by Axel Fredrik Cronstedt. Its name comes from the German "Kupfernickel" (devil\'s copper) because miners couldn\'t extract copper from nickel-bearing ore despite its copper-like appearance.','Used in stainless steel and superalloys, rechargeable batteries (NiMH, nickel-cadmium), coinage, electroplating, and catalysts for hydrogenation reactions.'],
-  [29,'Cu','Copper',63.546,CAT.TM,11,4,'One of the first metals worked by humans (~9000 BCE), copper gave name to the Chalcolithic (Copper Age). The Romans got much of theirs from Cyprus, giving copper its symbol Cu from "cuprum."','Essential for electrical wiring (highest conductivity of non-precious metals), plumbing, coins, antimicrobial surfaces, bronze and brass alloys, and electric motors.'],
-  [30,'Zn','Zinc',65.38,CAT.TM,12,4,'Zinc was officially discovered in 1746 by Andreas Sigismund Marggraf, though zinc alloys (brass) were made in ancient times. India produced zinc metal centuries before Europe. Its name likely comes from German "Zinke" meaning prong.','Used in galvanizing steel to prevent rust, die-casting for auto parts, brass alloys, sunscreen (zinc oxide), dietary supplements, and anti-corrosion paints.'],
-  [31,'Ga','Gallium',69.723,CAT.PT,13,4,'Gallium was predicted by Mendeleev as "eka-aluminum" and discovered in 1875 by Paul-Émile Lecoq de Boisbaudran via spectroscopy. It melts in the palm of your hand (30°C) and was one of the first confirmations of Mendeleev\'s predictions.','Used in semiconductors (GaAs, GaN) for LEDs, laser diodes, solar cells, and 5G transistors; thermometers replacing mercury; and as a gallium-indium alloy in nuclear reactors.'],
-  [32,'Ge','Germanium',72.630,CAT.ML,14,4,'Germanium was predicted by Mendeleev as "eka-silicon" and discovered in 1886 by Clemens Winkler, perfectly matching the prediction. This discovery was a major triumph for the periodic table.','Used in fiber optic cables (infrared windows), semiconductor devices, night-vision equipment, solar cells, and as a catalyst in PET plastic production.'],
-  [33,'As','Arsenic',74.922,CAT.ML,15,4,'Arsenic has been known since ancient times and was used as a poison in medieval Europe (called "inheritance powder"). Albertus Magnus is credited with isolating it in 1250. Its name comes from Greek for yellow orpiment.','Used in wood preservation (CCA), semiconductor compounds (GaAs), pesticides, lead-acid batteries, and historically in medicines and pigments (now largely discontinued).'],
-  [34,'Se','Selenium',78.971,CAT.NM,16,4,'Selenium was discovered in 1817 by Jöns Jacob Berzelius as a byproduct of sulfuric acid production. Named after the Moon goddess Selene, because it accompanies tellurium (Earth). It\'s a photoconductor.','Used in glass manufacturing (decolorizing), photovoltaic solar cells, photocopier drums, dietary supplements, rubber production, and semiconductors.'],
-  [35,'Br','Bromine',79.904,CAT.HA,17,4,'Bromine was discovered in 1826 by Antoine Jérôme Balard and independently by Carl Jacob Löwig. Named from Greek "bromos" meaning stench, due to its pungent smell. It\'s one of only two liquid elements at room temperature.','Used in flame retardants, water purification for pools, pharmaceutical intermediates, fumigants for soil treatment, and photographic films.'],
-  [36,'Kr','Krypton',83.798,CAT.NG,18,4,'Krypton was discovered in 1898 by William Ramsay and Morris Travers by evaporating liquid argon residue. Named from Greek "kryptos" meaning hidden. From 1960–1983, the meter was officially defined by krypton-86 emission.','Used in fluorescent lights and photography flashes, krypton-fluoride excimer lasers for semiconductor lithography, mixed with argon in energy-saving windows.'],
-  [37,'Rb','Rubidium',85.468,CAT.AK,1,5,'Rubidium was discovered in 1861 by Robert Bunsen and Gustav Kirchhoff using spectroscopy — one of the first elements discovered this way. Named for its deep red spectral lines ("rubidus" in Latin).','Used in atomic clocks (rubidium frequency standards), GPS systems, research applications, and fireworks for purple-red color; limited commercial applications.'],
-  [38,'Sr','Strontium',87.62,CAT.AE,2,5,'Strontium was discovered in 1787 in the mineral strontianite, found near Strontian, Scotland. Independently isolated by Humphry Davy in 1808. Its radioactive isotope Sr-90 is a serious nuclear fallout product.','Used in fireworks and flares for brilliant red color, cathode ray tube glass (now declining), ferrite ceramic magnets, and Sr-90 in nuclear batteries.'],
-  [39,'Y','Yttrium',88.906,CAT.TM,3,5,'Yttrium was discovered in 1794 by Johan Gadolin in the mineral ytterbite from Ytterby, Sweden — a quarry that gave names to four elements. Named after this small Swedish village.','Used in phosphors for TV screens and LED lighting, yttrium-aluminum garnet (YAG) lasers, superconductors (YBCO), cancer treatments, and strengthening alloys.'],
-  [40,'Zr','Zirconium',91.224,CAT.TM,4,5,'Zirconium was discovered in 1789 by Martin Heinrich Klaproth in the mineral zircon. Isolated in pure form only in 1914. Zircons are among the oldest known minerals (4.4 billion years) and are used for radiometric dating.','Used as nuclear reactor fuel cladding (transparent to neutrons), cubic zirconia gemstones, refractory ceramics, dental ceramics, and corrosion-resistant alloys.'],
-  [41,'Nb','Niobium',92.906,CAT.TM,5,5,'Niobium was discovered in 1801 by Charles Hatchett in a mineral from Connecticut. Named after Niobe, daughter of Tantalus (due to its similarity to tantalum). For a century it was called columbium in the USA.','Used in high-strength low-alloy steels for pipelines and cars, superconducting magnets for MRI and particle accelerators, jet engine superalloys, and superconducting qubits.'],
-  [42,'Mo','Molybdenum',95.96,CAT.TM,6,5,'Molybdenum was discovered as a distinct element in 1778 by Carl Wilhelm Scheele. Its name comes from the Greek "molybdos" meaning lead, as its ores were confused with lead ores. Isolated in 1781 by Peter Jacob Hjelm.','Used in high-strength steel alloys (tool steels, stainless steel), lubricants (MoS₂), catalysts in petroleum refining, and is an essential trace element in all living organisms.'],
-  [43,'Tc','Technetium',98,CAT.TM,7,5,'Technetium was the first artificially produced element, predicted by Mendeleev as "eka-manganese." It was created in 1937 by Carlo Perrier and Emilio Segrè by bombarding molybdenum with deuterons. Named from Greek "technetos" (artificial).','Tc-99m is the most widely used medical radioisotope in diagnostic imaging (nuclear medicine scans), particularly for cancer detection, bone scans, and heart imaging.'],
-  [44,'Ru','Ruthenium',101.07,CAT.TM,8,5,'Ruthenium was discovered in 1844 by Karl Ernst Claus in platinum ore residues. Named after Ruthenia, the Latin name for Russia. It was the last naturally occurring platinum group metal to be discovered.','Used as a hardening agent in platinum and palladium alloys, in electrical contacts, solar energy cells, catalysts for hydrogen production, and as an ink in fountain pens.'],
-  [45,'Rh','Rhodium',102.906,CAT.TM,9,5,'Rhodium was discovered in 1803 by William Hyde Wollaston in crude platinum ore. Named after the Greek "rhodon" (rose) due to the rose color of rhodium chloride solutions. It is one of the rarest elements on Earth.','Used primarily in catalytic converters for cars (three-way catalysts), electroplating for jewelry and optics, and as a catalyst in chemical reactions.'],
-  [46,'Pd','Palladium',106.42,CAT.TM,10,5,'Palladium was discovered in 1803 by William Hyde Wollaston, who named it after the asteroid Pallas, discovered two years earlier. It was controversially published anonymously. One of the platinum group metals.','Used in catalytic converters (alongside rhodium and platinum), hydrogen storage and purification, jewelry (white gold alloys), electronics, and dentistry.'],
-  [47,'Ag','Silver',107.868,CAT.TM,11,5,'Silver has been known and worked since at least 3000 BCE. Its symbol Ag comes from the Latin "argentum." Ancient civilizations in Anatolia and Greece mined silver extensively. It has the highest electrical and thermal conductivity of all metals.','Used in jewelry and silverware, photographic film (historically), electrical contacts, solar panels, antimicrobial applications in medicine, and mirrors.'],
-  [48,'Cd','Cadmium',112.411,CAT.TM,12,5,'Cadmium was discovered in 1817 by Friedrich Strohmeyer as an impurity in zinc carbonate. Named after "cadmia" (calamine, a zinc ore) or Cadmus, the mythological Phoenician prince. It often accompanies zinc ores.','Used in rechargeable nickel-cadmium batteries, yellow/orange pigments, electroplating for corrosion resistance, neutron absorbers in nuclear reactors (though now restricted due to toxicity).'],
-  [49,'In','Indium',114.818,CAT.PT,13,5,'Indium was discovered in 1863 by Ferdinand Reich and Hieronymous Theodor Richter via spectroscopy, identified by its indigo blue spectral line. Named after this characteristic color. It\'s a soft, silver-white metal.','Used in indium tin oxide (ITO) transparent conductors for LCD screens and touchscreens, low-melting alloys, bearings, solders, and thin-film solar cells.'],
-  [50,'Sn','Tin',118.710,CAT.PT,14,5,'Tin has been used since ancient times, primarily in bronze (tin-copper alloy), which defined the Bronze Age (~3300–1200 BCE). Its symbol Sn comes from the Latin "stannum." Cornwall was a major ancient tin source.','Used in food can coatings (tinplate), solder for electronics, bronze and pewter alloys, window glass manufacturing (float glass process), and organ pipes.'],
-  [51,'Sb','Antimony',121.760,CAT.ML,15,5,'Antimony has been known since ancient Egypt, used in eye cosmetics as kohl. Isolated as a pure element in the 17th century. Its symbol Sb comes from "stibium." The alchemist Basil Valentine wrote extensively about it.','Used in flame retardants (most important use), lead-acid battery grids, semiconductor devices, pewter and britannia metal alloys, and historically in type metal for printing.'],
-  [52,'Te','Tellurium',127.60,CAT.ML,16,5,'Tellurium was discovered in 1782 by Franz-Joseph Müller von Reichenstein in a Transylvanian gold ore. Named after Earth (Tellus) by Martin Heinrich Klaproth. It is one of the rarest stable elements in Earth\'s crust.','Used in CdTe thin-film solar cells, thermoelectric devices, alloys to improve machinability of steel and copper, rewritable optical discs, and rubber vulcanization.'],
-  [53,'I','Iodine',126.904,CAT.HA,17,5,'Iodine was discovered in 1811 by Bernard Courtois while extracting sodium from seaweed ash — he noticed a purple vapor. Named from Greek "ioeides" (violet-colored). It was quickly recognized for medical uses.','Used as an antiseptic, in thyroid medications, iodized salt to prevent goiter, contrast agents in medical imaging, and as a catalyst in polymer synthesis.'],
-  [54,'Xe','Xenon',131.293,CAT.NG,18,5,'Xenon was discovered in 1898 by William Ramsay and Morris Travers, the same year as krypton, by fractional distillation of liquid air. Named from Greek "xenos" meaning stranger. It forms compounds despite being noble.','Used in high-intensity discharge lamps (car headlights, cinema projectors), ion propulsion for spacecraft, medical imaging (Xe-133), and as an anesthetic.'],
-  [55,'Cs','Caesium',132.905,CAT.AK,1,6,'Caesium was discovered in 1860 by Robert Bunsen and Gustav Kirchhoff using spectroscopy — one of the first elements discovered this way. Named after the Latin "caesius" for sky blue, its spectral color. It\'s the most electropositive stable element.','Caesium-133 defines the SI second (atomic clocks); used in GPS, telecommunications timing, ion propulsion engines, drilling fluids for oil wells, and night-vision equipment.'],
-  [56,'Ba','Barium',137.327,CAT.AE,2,6,'Barium was identified in 1774 by Carl Wilhelm Scheele in barite mineral, and isolated in 1808 by Humphry Davy. Named from Greek "barys" meaning heavy, since barite (barium sulfate) is unusually dense.','Used in oil and gas drilling muds (barite), barium sulfate as a contrast agent for GI X-rays, rat poison (barium carbonate), fireworks for green color, and glass manufacturing.'],
-  [57,'La','Lanthanum',138.905,CAT.LA,4,9,'Lanthanum was discovered in 1839 by Carl Gustaf Mosander by separating it from cerium nitrate. Named from Greek "lanthanein" meaning to lie hidden, as it was concealed within cerium ore for years.','Used in hydrogen storage alloys for NiMH batteries, camera and telescope lens glass, mischmetal (lighter flint), fluid catalytic cracking of crude oil, and carbon arc lamps.'],
-  [58,'Ce','Cerium',140.116,CAT.LA,5,9,'Cerium was discovered in 1803 by Jöns Jacob Berzelius and Wilhelm Hisinger, and independently by Martin Heinrich Klaproth. Named after the asteroid Ceres, discovered two years earlier. It\'s the most abundant rare earth.','Used in catalytic converters, polishing powders for glass and semiconductor wafers, yellow glass pigment, mischmetal for flints, and as a cerium oxide fuel additive.'],
-  [59,'Pr','Praseodymium',140.908,CAT.LA,6,9,'Praseodymium was separated from neodymium in 1885 by Carl Auer von Welsbach. Named from Greek "prasios" (leek green) and "didymos" (twin), as it was split from "didymium." Its salts are characteristically green.','Used in high-strength permanent magnets (with neodymium), aircraft engine alloys, yellow glass pigment, and goggles for glassblowers and welders.'],
-  [60,'Nd','Neodymium',144.242,CAT.LA,7,9,'Neodymium was separated from praseodymium in 1885 by Carl Auer von Welsbach. Named from Greek for "new twin." The discovery of neodymium-iron-boron magnets in 1982 revolutionized permanent magnet technology.','Creates the strongest permanent magnets (NdFeB), essential for EV motors, wind turbines, headphones, hard drives, MRI machines, and modern electronics.'],
-  [61,'Pm','Promethium',145,CAT.LA,8,9,'Promethium was the last of the lanthanides to be discovered, first definitively isolated in 1945 at Oak Ridge National Laboratory from uranium fission products. Named after Prometheus, who stole fire from the gods. It has no stable isotopes.','Used in nuclear-powered batteries for spacecraft and pacemakers, luminous paint (historically), and as a portable X-ray source. All applications are limited due to its radioactivity.'],
-  [62,'Sm','Samarium',150.36,CAT.LA,9,9,'Samarium was discovered in 1879 by Paul-Émile Lecoq de Boisbaudran in samarskite mineral, named after Russian mining official Colonel Vasili Samarsky-Bykhovets — making samarium the first element named after a living person.','Used in samarium-cobalt permanent magnets (for high-temperature applications), cancer treatment (Sm-153), and neutron absorbers in nuclear reactors.'],
-  [63,'Eu','Europium',151.964,CAT.LA,10,9,'Europium was discovered in 1901 by Eugène-Anatole Demarçay. Named after Europe. Its unusual fluorescence properties were not recognized until decades later, when it became critical for color television technology.','Used in red and blue phosphors for TV and LED screens, euro banknote fluorescent security ink, fluorescent lighting, and as a dopant in lasers.'],
-  [64,'Gd','Gadolinium',157.25,CAT.LA,11,9,'Gadolinium was independently discovered in 1880 by Jean Charles Galissard de Marignac and Paul Émile Lecoq de Boisbaudran. Named after Finnish chemist Johan Gadolin, who first studied rare earths in 1794.','Used as MRI contrast agents (gadolinium chelates), neutron absorbers in nuclear reactors, computer memory chips, and in magnetocaloric refrigeration research.'],
-  [65,'Tb','Terbium',158.925,CAT.LA,12,9,'Terbium was discovered in 1843 by Carl Gustaf Mosander when he separated it from yttria. Named after Ytterby, Sweden. It was one of four elements named after this single quarry village.','Used in solid-state devices and sensors (terfenol-D magnetostrictive alloy), green phosphors in fluorescent lamps and flat-panel displays, and fuel cells.'],
-  [66,'Dy','Dysprosium',162.500,CAT.LA,13,9,'Dysprosium was discovered in 1886 by Paul-Émile Lecoq de Boisbaudran but only isolated in reasonably pure form in the 1950s. Named from Greek "dysprositos" meaning hard to get, reflecting the extreme difficulty of separating it.','Used in neodymium magnets to maintain strength at high temperatures (crucial for EV motors), nuclear reactor control rods, and data storage devices.'],
-  [67,'Ho','Holmium',164.930,CAT.LA,14,9,'Holmium was discovered in 1878 by Marc Delafontaine and Jacques-Louis Soret, and independently by Per Teodor Cleve. Named after Holmia, the Latin name for Stockholm, Sweden.','Has the highest magnetic moment of any element; used in nuclear reactor control rods, solid-state lasers for medical procedures, and as a calibration standard for spectrometers.'],
-  [68,'Er','Erbium',167.259,CAT.LA,15,9,'Erbium was discovered in 1843 by Carl Gustaf Mosander, along with terbium, from yttria. Named after Ytterby, Sweden. Its pink oxide (erbium oxide) gives a distinctive color to glass.','Used as an amplifier in fiber optic cables (EDFA — erbium-doped fiber amplifiers), pink glass and ceramic colorant, and Er:YAG lasers for dermatology and dentistry.'],
-  [69,'Tm','Thulium',168.934,CAT.LA,16,9,'Thulium was discovered in 1879 by Per Teodor Cleve. Named after Thule, the ancient name for Scandinavia or a mythical island at the northern edge of the world. It is the least abundant naturally occurring lanthanide.','Used in portable X-ray devices, high-performance lasers, and as a source of radiation in nuclear medical devices. Research applications due to its rarity.'],
-  [70,'Yb','Ytterbium',173.045,CAT.LA,17,9,'Ytterbium was discovered in 1878 by Jean Charles Galissard de Marignac. Named after Ytterby, Sweden — the fourth element named after this village. Pure ytterbium wasn\'t produced until 1953.','Used in ytterbium-doped fiber lasers (YDFLs) for cutting and welding metals, atomic clocks (ytterbium lattice clocks are the world\'s most precise), and stress gauges.'],
-  [71,'Lu','Lutetium',174.967,CAT.TM,3,6,'Lutetium was independently discovered in 1907 by Georges Urbain, Carl Auer von Welsbach, and Charles James. Named after Lutetia, the Latin name for Paris. It ended a decades-long quest to isolate all rare earths.','Used in PET scan detectors (lutetium silicate scintillators), refining petroleum, and Lu-177 is a promising radiopharmaceutical for targeted cancer therapy.'],
-  [72,'Hf','Hafnium',178.49,CAT.TM,4,6,'Hafnium was predicted by Niels Bohr and discovered in 1923 by Dirk Coster and Georg von Hevesy using X-ray spectroscopy in zirconium ore. Named after Hafnia, the Latin name for Copenhagen, where it was discovered.','Used in nuclear reactor control rods (excellent neutron absorber), refractory ceramics, semiconductor chips (hafnium oxide as gate dielectric), and plasma cutting torch tips.'],
-  [73,'Ta','Tantalum',180.948,CAT.TM,5,6,'Tantalum was discovered in 1802 by Anders Gustav Ekeberg in minerals from Finland and Sweden. Named after Tantalus of Greek mythology (like niobium/Niobe), due to difficulty dissolving it in acid. For a century it was confused with niobium.','Used in capacitors for electronics (phones, computers — world\'s most important use), surgical implants, chemical processing equipment, cutting tools, and camera lenses.'],
-  [74,'W','Tungsten',183.84,CAT.TM,6,6,'Tungsten was discovered in 1783 by brothers Juan and Fausto Elhuyar. Its symbol W comes from "wolfram," its German name. It has the highest melting point of all metals (3422°C) and was used for incandescent light bulb filaments.','Used in light bulb filaments (tungsten wire), cutting tools (tungsten carbide), high-speed steel drills, X-ray targets, counterweights in aerospace, and radiation shielding.'],
-  [75,'Re','Rhenium',186.207,CAT.TM,7,6,'Rhenium was discovered in 1925 by Walter Noddack, Ida Tacke, and Otto Berg using X-ray spectroscopy in platinum ore. Named after the Rhine River. It was the last naturally occurring stable element to be discovered.','Used in high-temperature superalloys for jet engines (Rolls-Royce uses significant amounts), platinum-rhenium catalysts for unleaded gasoline production, and thermocouples.'],
-  [76,'Os','Osmium',190.23,CAT.TM,8,6,'Osmium was discovered in 1803 by Smithson Tennant in the residue left when crude platinum was dissolved in aqua regia. Named after Greek "osme" for smell, due to the pungent odor of osmium tetroxide.','Used in osmium-iridium alloys for fountain pen tips, electrical contacts, and compass bearings; osmium tetroxide is a biological stain in electron microscopy.'],
-  [77,'Ir','Iridium',192.217,CAT.TM,9,6,'Iridium was discovered in 1803 alongside osmium by Smithson Tennant. Named after Iris, the Greek goddess of the rainbow, due to the variety of colors in its salts. A thin global iridium layer marks the K-Pg extinction event.','Used in high-temperature crucibles, spark plugs for aircraft engines, scientific instruments requiring extreme corrosion resistance, and as a mass standard (the kg prototype included iridium).'],
-  [78,'Pt','Platinum',195.084,CAT.TM,10,6,'Platinum was used by pre-Columbian South Americans and introduced to Europe by Antonio de Ulloa in 1735. Named from Spanish "platina" (little silver). It was initially considered a nuisance impurity in silver mining.','Used in catalytic converters (most important use), jewelry, laboratory crucibles, pacemaker electrodes, chemotherapy drugs (cisplatin), and as catalyst for hydrogen fuel cells.'],
-  [79,'Au','Gold',196.967,CAT.TM,11,6,'Gold has been known and valued since prehistoric times. The oldest known gold artifacts date to ~4600 BCE in Bulgaria. Its symbol Au comes from Latin "aurum." Gold rushes shaped the history of California, Australia, and South Africa.','Used in jewelry, monetary reserves, electronics (corrosion-free contacts), medical devices, space vehicle shielding, dentistry, and nanoparticles in cancer treatment.'],
-  [80,'Hg','Mercury',200.59,CAT.TM,12,6,'Mercury has been known since ancient times and was found in Egyptian tombs dating to ~1500 BCE. Named after the planet Mercury (the fastest-moving planet, like liquid mercury\'s mobility). It\'s the only metal liquid at room temperature.','Historically used in thermometers, barometers, and dental amalgam. Today used in fluorescent lighting, industrial chlorine production, and scientific instruments. Use declining due to toxicity.'],
-  [81,'Tl','Thallium',204.383,CAT.PT,13,6,'Thallium was discovered in 1861 by William Crookes using spectroscopy and named after the Greek "thallos" (green shoot) for its bright green spectral line. Its extreme toxicity earned it the nickname "the poisoner\'s poison."','Used in infrared optical materials (thallium bromide iodide), heart imaging (Tl-201 isotope for myocardial perfusion scans), and some specialized electronics. Medical use declining.'],
-  [82,'Pb','Lead',207.2,CAT.PT,14,6,'Lead has been used since at least 7000 BCE — among the earliest metals smelted. The Romans used it extensively for pipes, cookware, and wine sweetener (leading to speculative links to Roman decline). Its symbol Pb comes from Latin "plumbum."','Used in lead-acid batteries (cars), radiation shielding, ammunition, cable sheathing, and historically in paint and plumbing (now largely banned due to neurotoxicity).'],
-  [83,'Bi','Bismuth',208.980,CAT.PT,15,6,'Bismuth was recognized as a distinct element in 1753 by Claude François Geoffroy. Named from German "Wismut" (white mass). It was often confused with lead and tin historically. It\'s the most naturally diamagnetic element.','Used in medications (Pepto-Bismol for indigestion), cosmetics (bismuth oxychloride in makeup), lead-free solders and alloys, fire-detection systems, and nuclear medicine.'],
-  [84,'Po','Polonium',209,CAT.NM,16,6,'Polonium was discovered in 1898 by Marie and Pierre Curie while studying radioactive materials from pitchblende ore. Named after Marie Curie\'s native Poland. It was the first element discovered by the Curies.','Used in antistatic devices (polonium-210 ionizes air), anti-static brushes for film and optics, and as a heat source in space probes and nuclear weapons triggers.'],
-  [85,'At','Astatine',210,CAT.HA,17,6,'Astatine was first synthesized in 1940 by Dale Corson, Kenneth MacKenzie, and Emilio Segrè at UC Berkeley by bombarding bismuth with alpha particles. Named from Greek "astatos" meaning unstable. It is the rarest naturally occurring element.','Investigated for targeted cancer radiotherapy (At-211 is ideal for killing cancer cells with minimal surrounding tissue damage), but applications are limited by its extreme rarity.'],
-  [86,'Rn','Radon',222,CAT.NG,18,6,'Radon was discovered in 1899 by Ernest Rutherford and Robert Bowie Owens. Friedrich Ernst Dorn identified it as a noble gas in 1900. Named from radium. It\'s the heaviest noble gas and a significant natural radiation source.','No commercial uses due to radioactivity. Radon-222 has been used in some cancer radiation therapies historically. It is primarily known as a health hazard in buildings — a leading cause of lung cancer.'],
-  [87,'Fr','Francium',223,CAT.AK,1,7,'Francium was discovered in 1939 by Marguerite Perey at the Curie Institute in Paris, making her the first woman to discover an element. Named after France, her homeland. It is the second rarest naturally occurring element.','No practical uses due to extreme radioactivity and rarity. Used only for fundamental scientific research on atomic structure and weak force measurements.'],
-  [88,'Ra','Radium',226,CAT.AE,2,7,'Radium was discovered in 1898 by Marie and Pierre Curie in pitchblende ore. Isolating 1 gram required processing 10 tons of ore. Marie Curie won her second Nobel Prize for isolating radium in 1911. Radium watch dials caused tragedies for "Radium Girls."','Historically used in luminous paint ("radium girls" tragedy), cancer treatments, and radon production. Now mostly replaced by safer alternatives, though Ra-223 treats bone metastases.'],
-  [89,'Ac','Actinium',227,CAT.AC,4,10,'Actinium was discovered in 1899 by André-Louis Debierne in pitchblende residue from the Curies\' radium work. Named from Greek "aktinos" meaning ray. It is 150 times more radioactive than radium and gives actinide series its name.','Ac-225 is used in targeted alpha therapy for cancer treatment. Historically used as a source of neutrons. Research into Ac-227 as a radioisotope generator for medical applications.'],
-  [90,'Th','Thorium',232.038,CAT.AC,5,10,'Thorium was discovered in 1829 by Jöns Jacob Berzelius in a Norwegian mineral. Named after Thor, the Norse god of thunder. Early use in gas mantle lanterns. Thorium is three times more abundant than uranium.','Used in thorium-magnesium alloys for aerospace, tungsten welding electrodes, high-refractive-index optical glass, and as a potential nuclear fuel for safer thorium reactors.'],
-  [91,'Pa','Protactinium',231.036,CAT.AC,6,10,'Protactinium was discovered in 1913 by Kasimir Fajans and Oswald Helmuth Göhring, and more completely characterized in 1917 by Lise Meitner and Otto Hahn. Named from Greek "protos" (first) + actinium, since it decays to actinium.','No significant commercial uses due to rarity and radioactivity. Used in research for uranium-235/protactinium-231 dating of ocean sediments and climate research.'],
-  [92,'U','Uranium',238.029,CAT.AC,7,10,'Uranium was discovered in 1789 by Martin Heinrich Klaproth in the mineral uraninite (pitchblende). Named after the recently discovered planet Uranus. Its radioactivity was discovered by Henri Becquerel in 1896.','Used as fuel in nuclear power reactors (provides ~10% of world electricity), in nuclear weapons, as ballast in aircraft (depleted uranium), and historically as yellow glass colorant.'],
-  [93,'Np','Neptunium',237,CAT.AC,8,10,'Neptunium was the first transuranic element, synthesized in 1940 by Edwin McMillan and Philip Abelson at Berkeley by bombarding uranium with neutrons. Named after Neptune, the next planet after Uranus (following uranium\'s naming pattern).','Np-237 is used in neutron detectors, and as a precursor in the production of Pu-238 for nuclear batteries used in spacecraft (such as Voyager and Cassini).'],
-  [94,'Pu','Plutonium',244,CAT.AC,9,10,'Plutonium was synthesized in 1940 by Glenn Seaborg, Edwin McMillan, Joseph Kennedy, and Arthur Wahl at Berkeley. Named after Pluto. Plutonium-239 became critical for the Manhattan Project and the Trinity test.','Used as fuel in nuclear reactors and weapons, and Pu-238 powers the radioisotope thermoelectric generators (RTGs) of deep space probes including Voyager, Cassini, and New Horizons.'],
-  [95,'Am','Americium',243,CAT.AC,10,10,'Americium was first synthesized in 1944 by Glenn Seaborg, Ralph James, Leon Morgan, and Albert Ghiorso at Chicago. Named after the Americas. It was produced secretly during WWII as part of the Manhattan Project.','Am-241 is found in virtually every household smoke detector — its alpha radiation ionizes air to detect smoke particles. Also used in thickness gauges and medical diagnostic sources.'],
-  [96,'Cm','Curium',247,CAT.AC,11,10,'Curium was synthesized in 1944 by Glenn Seaborg, Ralph James, and Albert Ghiorso at the University of Chicago. Named after Marie and Pierre Curie. Seaborg joked it should have been called "cyclonium" since it was made in a cyclotron.','Used as a power source in RTGs for spacecraft (Cm-242, Cm-244), alpha-particle X-ray spectrometers on Mars rovers (Spirit, Opportunity), and as a neutron source.'],
-  [97,'Bk','Berkelium',247,CAT.AC,12,10,'Berkelium was first synthesized in 1949 by Glenn Seaborg, Stanley Thompson, and Albert Ghiorso at UC Berkeley by bombarding americium with alpha particles. Named after Berkeley, California.','No current practical applications due to extreme rarity and high radioactivity. Used only in basic nuclear research and as a target material to synthesize heavier elements.'],
-  [98,'Cf','Californium',251,CAT.AC,13,10,'Californium was first synthesized in 1950 by Glenn Seaborg, Stanley Thompson, Kenneth Street Jr., and Albert Ghiorso at UC Berkeley. Named after California and UC Berkeley.','Used as a neutron source for nuclear reactor startup and well logging in oil and gas industry, neutron activation analysis to identify materials, and treating certain cancers.'],
-  [99,'Es','Einsteinium',252,CAT.AC,14,10,'Einsteinium was discovered in the fallout from the first hydrogen bomb test (Ivy Mike, 1952). Named after Albert Einstein. Its discovery was classified for several years. It was the seventh transuranic element identified.','No practical uses due to extreme rarity (only nanograms ever produced). Used only in research to study the properties of heavy actinides and to synthesize heavier elements.'],
-  [100,'Fm','Fermium',257,CAT.AC,15,10,'Fermium was also discovered in the Ivy Mike hydrogen bomb fallout in 1952 and named after Enrico Fermi, the architect of the first nuclear reactor. Like einsteinium, its discovery was initially classified.','No practical applications due to extreme rarity and radioactivity. Used only in fundamental nuclear physics research. Cannot be produced in weighable quantities.'],
-  [101,'Md','Mendelevium',258,CAT.AC,16,10,'Mendelevium was first synthesized in 1955 by Glenn Seaborg, Bernard Harvey, Gregory Choppin, Stanley Thompson, and Albert Ghiorso. Named after Dmitri Mendeleev, who created the periodic table.','No practical uses; only a few atoms have ever been produced. Studied to understand the chemical properties of heavy actinides and to test nuclear models.'],
-  [102,'No','Nobelium',259,CAT.AC,17,10,'Nobelium was first unambiguously synthesized in 1966 at the Joint Institute for Nuclear Research in Dubna, Russia. Named after Alfred Nobel, founder of the Nobel Prizes. Earlier claimed discoveries were disputed.','No practical applications; only tiny amounts have been produced. Exists only for fractions of a second to minutes. Used in nuclear structure research.'],
-  [103,'Lr','Lawrencium',266,CAT.AC,18,10,'Lawrencium was first synthesized in 1961 by Albert Ghiorso and colleagues at Berkeley. Named after Ernest Lawrence, inventor of the cyclotron. It is the last actinide and heaviest element in the f-block.','No practical applications. Used only in nuclear physics research to study the properties of transactinide elements and test theoretical models of heavy atom chemistry.'],
-  [104,'Rf','Rutherfordium',267,CAT.TM,4,7,'Rutherfordium was first synthesized in 1969 at the Joint Institute for Nuclear Research in Dubna and UC Berkeley. Named after Ernest Rutherford. There was a naming dispute between American ("unnilquadium") and Soviet teams for decades.','No applications. Only a few atoms have ever been created, lasting seconds to minutes. Studied to test if superheavy elements follow expected periodic trends.'],
-  [105,'Db','Dubnium',268,CAT.TM,5,7,'Dubnium was synthesized independently at Dubna (Russia) and Berkeley (USA) in 1967–1970. Named after Dubna, Russia, after a long naming dispute. The American name "hahnium" was used for a period before IUPAC decided.','No applications. Less than a million atoms have ever been made. Only useful for nuclear physics research to probe the limits of the periodic table and nuclear stability.'],
-  [106,'Sg','Seaborgium',269,CAT.TM,6,7,'Seaborgium was first synthesized in 1974 at Lawrence Berkeley National Laboratory. Named after Glenn Seaborg — the only element named after a living person at the time of naming (controversial). Seaborg joked he could mail letters "from his element."','No practical applications. Only a few hundred atoms have ever been created. Used in research on superheavy element chemistry and nuclear physics.'],
-  [107,'Bh','Bohrium',270,CAT.TM,7,7,'Bohrium was first synthesized in 1981 by a team led by Peter Armbruster and Gottfried Münzenberg at GSI Darmstadt, Germany. Named after Niels Bohr, the Danish physicist who developed the atomic model.','No practical applications. Only a few dozen atoms have ever been made, each lasting less than a second to tens of seconds. Used only in nuclear physics research.'],
-  [108,'Hs','Hassium',277,CAT.TM,8,7,'Hassium was first synthesized in 1984 by a German team at GSI Darmstadt. Named after Hassia, the Latin name for the German state of Hesse where GSI is located. Only a few atoms have been created.','No practical applications. A 2006 experiment showed hassium behaves like osmium in chemical reactions, confirming periodic table predictions for superheavy elements.'],
-  [109,'Mt','Meitnerium',278,CAT.UK,9,7,'Meitnerium was first synthesized in 1982 at GSI Darmstadt. Named after Lise Meitner, the Austrian physicist who co-discovered nuclear fission and was unjustly passed over for the Nobel Prize. One of very few elements named after a woman.','No practical applications. Only a few atoms have been made. Named as a tribute to Meitner\'s contributions to nuclear physics, which were underrecognized during her lifetime.'],
-  [110,'Ds','Darmstadtium',281,CAT.UK,10,7,'Darmstadtium was first synthesized in 1994 at GSI Darmstadt, Germany. Named after the city of Darmstadt. It took the team about a week of experiments to produce just one atom. Previously called "ununnilium."','No practical applications. Only a handful of atoms have ever been created, each decaying within microseconds to seconds. Used only in nuclear physics research.'],
-  [111,'Rg','Roentgenium',282,CAT.UK,11,7,'Roentgenium was first synthesized in 1994 at GSI Darmstadt. Named after Wilhelm Röntgen, discoverer of X-rays. Previously known as "unununium." Only a few atoms have been created.','No practical applications. Atoms last microseconds to seconds. The naming honors Röntgen\'s revolutionary discovery of X-rays in 1895, which transformed medicine.'],
-  [112,'Cn','Copernicium',285,CAT.TM,12,7,'Copernicium was first synthesized in 1996 at GSI Darmstadt. Named after astronomer Nicolaus Copernicus, who proposed the heliocentric model. Confirmed and officially named in 2010 — on the 537th anniversary of Copernicus\'s birth.','No practical applications. Theoretical predictions suggest it might behave as a noble gas rather than a metal at room temperature, making it chemically unique among group 12 elements.'],
-  [113,'Nh','Nihonium',286,CAT.PT,13,7,'Nihonium was first synthesized in 2004 at RIKEN in Japan. Named after Nihon, the Japanese word for Japan — making it the first element discovered in Asia. Official recognition came in 2016 after years of verification.','No practical applications. It took 9 years and 400 trillion fusion attempts to produce just three atoms. Named to honor Japan\'s scientific achievement.'],
-  [114,'Fl','Flerovium',289,CAT.PT,14,7,'Flerovium was first synthesized in 1999 at the Joint Institute for Nuclear Research in Dubna. Named after Flerov Laboratory (named after physicist Georgy Flyorov, who also wrote a famous letter urging the Soviet atomic bomb program).','No practical applications. Theoretically sits at the "island of stability" — a predicted region where superheavy nuclei might be unusually long-lived. Research is ongoing.'],
-  [115,'Mc','Moscovium',290,CAT.PT,15,7,'Moscovium was first synthesized in 2003 jointly by Dubna (Russia) and Livermore (USA). Named after Moscow Oblast, where Dubna is located. Officially named in 2016. Previously called "ununpentium."','No practical applications. Part of the "island of stability" research zone. A handful of atoms produced, each lasting microseconds. Nuclear physics research only.'],
-  [116,'Lv','Livermorium',293,CAT.PT,16,7,'Livermorium was first synthesized in 2000 at Dubna in collaboration with Lawrence Livermore National Laboratory, after whom it\'s named. Previously called "ununhexium." Officially named in 2012.','No practical applications. Expected to behave chemically like polonium. Research into its properties may confirm or challenge periodic table predictions for superheavy elements.'],
-  [117,'Ts','Tennessine',294,CAT.HA,17,7,'Tennessine was first synthesized in 2010 at Dubna with contributions from Oak Ridge, Vanderbilt University, and Vanderbilt University Medical Center — all in Tennessee. Named after Tennessee. One of the heaviest known elements.','No practical applications. Part of ongoing research into the island of stability. Only a few atoms have been created, each decaying in milliseconds.'],
-  [118,'Og','Oganesson',294,CAT.NG,18,7,'Oganesson was first synthesized in 2002 at Dubna. Named after physicist Yuri Oganessian, a pioneering superheavy element researcher — only the second element named after a living person. Previously called "ununoctium." Officially named 2016.','No practical applications. Theoretically the heaviest element in the noble gas group, but predicted to be solid at room temperature and highly reactive — defying noble gas trends. Pure research only.'],
-];
+// Tries Kimi first, falls back to DeepSeek if Kimi key is missing or fails
+async function callAI(prompt, maxTokens) {
+  async function callModel(provider) {
+    const key = API_KEYS[provider];
+    if (!key) throw new Error('no key for ' + provider);
+    const { url, model } = PROVIDERS[provider];
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    const raw = data.choices[0].message.content;
+    return JSON.parse(raw.replace(/```json|```/g, '').trim());
+  }
 
-// Build element position map
-const cells = Array(18 * 10).fill(null);
-elements.forEach(e => {
-  const [num, sym, name, mass, cat, col, row] = e;
-  const idx = (row - 1) * 18 + (col - 1);
-  cells[idx] = e;
-});
-
-const lantLabel = { idx: (8 - 1) * 18 + (3 - 1), text: '57-71' };
-const actLabel  = { idx: (9 - 1) * 18 + (3 - 1), text: '89-103' };
-
-const grid = document.getElementById('ptable');
-let activeEl = null;
-
-function buildTable() {
-  for (let i = 0; i < 18 * 10; i++) {
-    const el = document.createElement('div');
-
-    if (i === lantLabel.idx) {
-      el.className = 'series-label';
-      el.textContent = lantLabel.text;
-      grid.appendChild(el);
-      continue;
-    }
-    if (i === actLabel.idx) {
-      el.className = 'series-label';
-      el.textContent = actLabel.text;
-      grid.appendChild(el);
-      continue;
-    }
-
-    const data = cells[i];
-    if (!data) {
-      el.style.background = 'transparent';
-      el.style.border = 'none';
-      grid.appendChild(el);
-      continue;
-    }
-
-    const [num, sym, name, mass, cat] = data;
-    el.className = `el cat-${cat}`;
-    el.innerHTML = `
-      <span class="num">${num}</span>
-      <span class="sym">${sym}</span>
-      <span class="name">${name}</span>
-    `;
-    el.title = name;
-    el.onclick = () => showElement(data);
-    grid.appendChild(el);
+  try {
+    return await callModel('kimi');
+  } catch (e1) {
+    console.warn('Kimi failed, falling back to DeepSeek:', e1.message);
+    return await callModel('deepseek');
   }
 }
 
-function showElement(data) {
-  const [num, sym, name, mass, cat, col, row, history, uses] = data;
+// ════════════════════════════════════════════════
+//  ELEMENT DATA
+// ════════════════════════════════════════════════
+const CATEGORIES = {
+  'Alkali Metal': '#f87171',
+  'Alkaline Earth Metal': '#fb923c',
+  'Transition Metal': '#a78bfa',
+  'Post-transition Metal': '#60a5fa',
+  'Metalloid': '#facc15',
+  'Reactive Nonmetal': '#34d399',
+  'Noble Gas': '#f472b6',
+  'Lanthanide': '#818cf8',
+  'Actinide': '#fb7185',
+  'Unknown Chemical Properties': '#94a3b8',
+};
 
-  document.getElementById('bNum').textContent = num;
-  document.getElementById('bSym').textContent = sym;
-  document.getElementById('bName').textContent = name;
-  document.getElementById('bMass').textContent = mass;
+const SHELL_NAMES = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'];
 
-  const color = catColors[cat];
-  const badge = document.getElementById('infoBadge');
-  badge.querySelector('.b-sym').style.color = color;
+// Fields: n, sym, name, cat, mass, period, group,
+//         melt (°C), boil (°C), density (g/cm³ or g/L for gases),
+//         densityNote, discoveredBy, year
+const ELEMENTS = [
+  { n: 1, sym: 'H', name: 'Hydrogen', cat: 'Reactive Nonmetal', mass: '1.008', period: 1, group: 1, melt: '-259.1', boil: '-252.9', density: '0.0899 g/L', discoveredBy: 'Henry Cavendish', year: '1766' },
+  { n: 2, sym: 'He', name: 'Helium', cat: 'Noble Gas', mass: '4.003', period: 1, group: 18, melt: '−272.2', boil: '−268.9', density: '0.1786 g/L', discoveredBy: 'Pierre Janssen & Norman Lockyer', year: '1868' },
+  { n: 3, sym: 'Li', name: 'Lithium', cat: 'Alkali Metal', mass: '6.941', period: 2, group: 1, melt: '180.5', boil: '1342', density: '0.534', discoveredBy: 'Johan August Arfwedson', year: '1817' },
+  { n: 4, sym: 'Be', name: 'Beryllium', cat: 'Alkaline Earth Metal', mass: '9.012', period: 2, group: 2, melt: '1287', boil: '2469', density: '1.85', discoveredBy: 'Louis-Nicolas Vauquelin', year: '1798' },
+  { n: 5, sym: 'B', name: 'Boron', cat: 'Metalloid', mass: '10.81', period: 2, group: 13, melt: '2075', boil: '4000', density: '2.34', discoveredBy: 'Joseph Louis Gay-Lussac', year: '1808' },
+  { n: 6, sym: 'C', name: 'Carbon', cat: 'Reactive Nonmetal', mass: '12.011', period: 2, group: 14, melt: '3550', boil: '4027', density: '2.267', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 7, sym: 'N', name: 'Nitrogen', cat: 'Reactive Nonmetal', mass: '14.007', period: 2, group: 15, melt: '−210.0', boil: '−195.8', density: '1.251 g/L', discoveredBy: 'Daniel Rutherford', year: '1772' },
+  { n: 8, sym: 'O', name: 'Oxygen', cat: 'Reactive Nonmetal', mass: '15.999', period: 2, group: 16, melt: '−218.8', boil: '−183.0', density: '1.429 g/L', discoveredBy: 'Carl Wilhelm Scheele', year: '1774' },
+  { n: 9, sym: 'F', name: 'Fluorine', cat: 'Reactive Nonmetal', mass: '18.998', period: 2, group: 17, melt: '−219.6', boil: '−188.1', density: '1.696 g/L', discoveredBy: 'Henri Moissan', year: '1886' },
+  { n: 10, sym: 'Ne', name: 'Neon', cat: 'Noble Gas', mass: '20.18', period: 2, group: 18, melt: '−248.6', boil: '−246.1', density: '0.9002 g/L', discoveredBy: 'William Ramsay & Morris Travers', year: '1898' },
+  { n: 11, sym: 'Na', name: 'Sodium', cat: 'Alkali Metal', mass: '22.99', period: 3, group: 1, melt: '97.8', boil: '883', density: '0.968', discoveredBy: 'Humphry Davy', year: '1807' },
+  { n: 12, sym: 'Mg', name: 'Magnesium', cat: 'Alkaline Earth Metal', mass: '24.305', period: 3, group: 2, melt: '650', boil: '1090', density: '1.738', discoveredBy: 'Joseph Black', year: '1755' },
+  { n: 13, sym: 'Al', name: 'Aluminium', cat: 'Post-transition Metal', mass: '26.982', period: 3, group: 13, melt: '660.3', boil: '2519', density: '2.70', discoveredBy: 'Hans Christian Ørsted', year: '1825' },
+  { n: 14, sym: 'Si', name: 'Silicon', cat: 'Metalloid', mass: '28.085', period: 3, group: 14, melt: '1414', boil: '3265', density: '2.3296', discoveredBy: 'Jöns Jacob Berzelius', year: '1824' },
+  { n: 15, sym: 'P', name: 'Phosphorus', cat: 'Reactive Nonmetal', mass: '30.974', period: 3, group: 15, melt: '44.2', boil: '280.5', density: '1.823', discoveredBy: 'Hennig Brand', year: '1669' },
+  { n: 16, sym: 'S', name: 'Sulfur', cat: 'Reactive Nonmetal', mass: '32.06', period: 3, group: 16, melt: '115.2', boil: '444.6', density: '2.07', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 17, sym: 'Cl', name: 'Chlorine', cat: 'Reactive Nonmetal', mass: '35.45', period: 3, group: 17, melt: '−101.5', boil: '−34.05', density: '3.214 g/L', discoveredBy: 'Carl Wilhelm Scheele', year: '1774' },
+  { n: 18, sym: 'Ar', name: 'Argon', cat: 'Noble Gas', mass: '39.948', period: 3, group: 18, melt: '−189.4', boil: '−185.9', density: '1.784 g/L', discoveredBy: 'Lord Rayleigh & William Ramsay', year: '1894' },
+  { n: 19, sym: 'K', name: 'Potassium', cat: 'Alkali Metal', mass: '39.098', period: 4, group: 1, melt: '63.4', boil: '759', density: '0.89', discoveredBy: 'Humphry Davy', year: '1807' },
+  { n: 20, sym: 'Ca', name: 'Calcium', cat: 'Alkaline Earth Metal', mass: '40.078', period: 4, group: 2, melt: '842', boil: '1484', density: '1.55', discoveredBy: 'Humphry Davy', year: '1808' },
+  { n: 21, sym: 'Sc', name: 'Scandium', cat: 'Transition Metal', mass: '44.956', period: 4, group: 3, melt: '1541', boil: '2830', density: '2.985', discoveredBy: 'Lars Fredrik Nilson', year: '1879' },
+  { n: 22, sym: 'Ti', name: 'Titanium', cat: 'Transition Metal', mass: '47.867', period: 4, group: 4, melt: '1668', boil: '3287', density: '4.507', discoveredBy: 'William Gregor', year: '1791' },
+  { n: 23, sym: 'V', name: 'Vanadium', cat: 'Transition Metal', mass: '50.942', period: 4, group: 5, melt: '1910', boil: '3407', density: '6.11', discoveredBy: 'Andrés Manuel del Río', year: '1801' },
+  { n: 24, sym: 'Cr', name: 'Chromium', cat: 'Transition Metal', mass: '51.996', period: 4, group: 6, melt: '1907', boil: '2671', density: '7.15', discoveredBy: 'Louis-Nicolas Vauquelin', year: '1798' },
+  { n: 25, sym: 'Mn', name: 'Manganese', cat: 'Transition Metal', mass: '54.938', period: 4, group: 7, melt: '1246', boil: '2061', density: '7.21', discoveredBy: 'Ignatius Gottfried Kaim', year: '1774' },
+  { n: 26, sym: 'Fe', name: 'Iron', cat: 'Transition Metal', mass: '55.845', period: 4, group: 8, melt: '1538', boil: '2861', density: '7.874', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 27, sym: 'Co', name: 'Cobalt', cat: 'Transition Metal', mass: '58.933', period: 4, group: 9, melt: '1495', boil: '2927', density: '8.90', discoveredBy: 'Georg Brandt', year: '1735' },
+  { n: 28, sym: 'Ni', name: 'Nickel', cat: 'Transition Metal', mass: '58.693', period: 4, group: 10, melt: '1455', boil: '2913', density: '8.908', discoveredBy: 'Axel Fredrik Cronstedt', year: '1751' },
+  { n: 29, sym: 'Cu', name: 'Copper', cat: 'Transition Metal', mass: '63.546', period: 4, group: 11, melt: '1085', boil: '2562', density: '8.96', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 30, sym: 'Zn', name: 'Zinc', cat: 'Transition Metal', mass: '65.38', period: 4, group: 12, melt: '419.5', boil: '907', density: '7.14', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 31, sym: 'Ga', name: 'Gallium', cat: 'Post-transition Metal', mass: '69.723', period: 4, group: 13, melt: '29.76', boil: '2204', density: '5.91', discoveredBy: 'Paul-Émile Lecoq de Boisbaudran', year: '1875' },
+  { n: 32, sym: 'Ge', name: 'Germanium', cat: 'Metalloid', mass: '72.630', period: 4, group: 14, melt: '938.3', boil: '2820', density: '5.323', discoveredBy: 'Clemens Winkler', year: '1886' },
+  { n: 33, sym: 'As', name: 'Arsenic', cat: 'Metalloid', mass: '74.922', period: 4, group: 15, melt: '817', boil: '614', density: '5.727', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 34, sym: 'Se', name: 'Selenium', cat: 'Reactive Nonmetal', mass: '78.971', period: 4, group: 16, melt: '221', boil: '685', density: '4.81', discoveredBy: 'Jöns Jacob Berzelius', year: '1817' },
+  { n: 35, sym: 'Br', name: 'Bromine', cat: 'Reactive Nonmetal', mass: '79.904', period: 4, group: 17, melt: '−7.3', boil: '58.8', density: '3.1028', discoveredBy: 'Antoine Jérôme Balard', year: '1825' },
+  { n: 36, sym: 'Kr', name: 'Krypton', cat: 'Noble Gas', mass: '83.798', period: 4, group: 18, melt: '−157.4', boil: '−153.4', density: '3.749 g/L', discoveredBy: 'William Ramsay & Morris Travers', year: '1898' },
+  { n: 37, sym: 'Rb', name: 'Rubidium', cat: 'Alkali Metal', mass: '85.468', period: 5, group: 1, melt: '39.3', boil: '688', density: '1.532', discoveredBy: 'Robert Bunsen & Gustav Kirchhoff', year: '1861' },
+  { n: 38, sym: 'Sr', name: 'Strontium', cat: 'Alkaline Earth Metal', mass: '87.62', period: 5, group: 2, melt: '777', boil: '1377', density: '2.64', discoveredBy: 'Adair Crawford', year: '1790' },
+  { n: 39, sym: 'Y', name: 'Yttrium', cat: 'Transition Metal', mass: '88.906', period: 5, group: 3, melt: '1526', boil: '3336', density: '4.472', discoveredBy: 'Johan Gadolin', year: '1794' },
+  { n: 40, sym: 'Zr', name: 'Zirconium', cat: 'Transition Metal', mass: '91.224', period: 5, group: 4, melt: '1855', boil: '4409', density: '6.52', discoveredBy: 'Martin Heinrich Klaproth', year: '1789' },
+  { n: 41, sym: 'Nb', name: 'Niobium', cat: 'Transition Metal', mass: '92.906', period: 5, group: 5, melt: '2477', boil: '4744', density: '8.57', discoveredBy: 'Charles Hatchett', year: '1801' },
+  { n: 42, sym: 'Mo', name: 'Molybdenum', cat: 'Transition Metal', mass: '95.95', period: 5, group: 6, melt: '2623', boil: '4639', density: '10.28', discoveredBy: 'Carl Wilhelm Scheele', year: '1781' },
+  { n: 43, sym: 'Tc', name: 'Technetium', cat: 'Transition Metal', mass: '98', period: 5, group: 7, melt: '2157', boil: '4265', density: '11', discoveredBy: 'Emilio Segrè & Carlo Perrier', year: '1937' },
+  { n: 44, sym: 'Ru', name: 'Ruthenium', cat: 'Transition Metal', mass: '101.07', period: 5, group: 8, melt: '2334', boil: '4150', density: '12.45', discoveredBy: 'Karl Ernst Claus', year: '1844' },
+  { n: 45, sym: 'Rh', name: 'Rhodium', cat: 'Transition Metal', mass: '102.91', period: 5, group: 9, melt: '1964', boil: '3695', density: '12.41', discoveredBy: 'William Hyde Wollaston', year: '1803' },
+  { n: 46, sym: 'Pd', name: 'Palladium', cat: 'Transition Metal', mass: '106.42', period: 5, group: 10, melt: '1555', boil: '2963', density: '12.023', discoveredBy: 'William Hyde Wollaston', year: '1803' },
+  { n: 47, sym: 'Ag', name: 'Silver', cat: 'Transition Metal', mass: '107.87', period: 5, group: 11, melt: '961.8', boil: '2162', density: '10.49', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 48, sym: 'Cd', name: 'Cadmium', cat: 'Transition Metal', mass: '112.41', period: 5, group: 12, melt: '321.1', boil: '767', density: '8.65', discoveredBy: 'Karl Samuel Leberecht Hermann', year: '1817' },
+  { n: 49, sym: 'In', name: 'Indium', cat: 'Post-transition Metal', mass: '114.82', period: 5, group: 13, melt: '156.6', boil: '2072', density: '7.31', discoveredBy: 'Ferdinand Reich & H. Richter', year: '1863' },
+  { n: 50, sym: 'Sn', name: 'Tin', cat: 'Post-transition Metal', mass: '118.71', period: 5, group: 14, melt: '231.9', boil: '2602', density: '7.265', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 51, sym: 'Sb', name: 'Antimony', cat: 'Metalloid', mass: '121.76', period: 5, group: 15, melt: '630.6', boil: '1587', density: '6.697', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 52, sym: 'Te', name: 'Tellurium', cat: 'Metalloid', mass: '127.60', period: 5, group: 16, melt: '449.5', boil: '988', density: '6.24', discoveredBy: 'Franz-Joseph Müller', year: '1782' },
+  { n: 53, sym: 'I', name: 'Iodine', cat: 'Reactive Nonmetal', mass: '126.90', period: 5, group: 17, melt: '113.7', boil: '184.3', density: '4.933', discoveredBy: 'Bernard Courtois', year: '1811' },
+  { n: 54, sym: 'Xe', name: 'Xenon', cat: 'Noble Gas', mass: '131.29', period: 5, group: 18, melt: '−111.8', boil: '−108.1', density: '5.894 g/L', discoveredBy: 'William Ramsay & Morris Travers', year: '1898' },
+  { n: 55, sym: 'Cs', name: 'Caesium', cat: 'Alkali Metal', mass: '132.91', period: 6, group: 1, melt: '28.5', boil: '671', density: '1.873', discoveredBy: 'Robert Bunsen & G. Kirchhoff', year: '1860' },
+  { n: 56, sym: 'Ba', name: 'Barium', cat: 'Alkaline Earth Metal', mass: '137.33', period: 6, group: 2, melt: '727', boil: '1870', density: '3.51', discoveredBy: 'Carl Wilhelm Scheele', year: '1772' },
+  { n: 57, sym: 'La', name: 'Lanthanum', cat: 'Lanthanide', mass: '138.91', period: 6, group: 3, melt: '920', boil: '3464', density: '6.162', discoveredBy: 'Carl Gustaf Mosander', year: '1839' },
+  { n: 58, sym: 'Ce', name: 'Cerium', cat: 'Lanthanide', mass: '140.12', period: 8, group: 4, melt: '798', boil: '3443', density: '6.770', discoveredBy: 'Jöns Jacob Berzelius & W. Hisinger', year: '1803' },
+  { n: 59, sym: 'Pr', name: 'Praseodymium', cat: 'Lanthanide', mass: '140.91', period: 8, group: 5, melt: '931', boil: '3520', density: '6.77', discoveredBy: 'Carl Auer von Welsbach', year: '1885' },
+  { n: 60, sym: 'Nd', name: 'Neodymium', cat: 'Lanthanide', mass: '144.24', period: 8, group: 6, melt: '1016', boil: '3074', density: '7.01', discoveredBy: 'Carl Auer von Welsbach', year: '1885' },
+  { n: 61, sym: 'Pm', name: 'Promethium', cat: 'Lanthanide', mass: '145', period: 8, group: 7, melt: '1100', boil: '3000', density: '7.26', discoveredBy: 'Charles D. Coryell et al.', year: '1945' },
+  { n: 62, sym: 'Sm', name: 'Samarium', cat: 'Lanthanide', mass: '150.36', period: 8, group: 8, melt: '1072', boil: '1794', density: '7.52', discoveredBy: 'Paul-Émile Lecoq de Boisbaudran', year: '1879' },
+  { n: 63, sym: 'Eu', name: 'Europium', cat: 'Lanthanide', mass: '151.96', period: 8, group: 9, melt: '826', boil: '1529', density: '5.264', discoveredBy: 'Eugène-Anatole Demarçay', year: '1901' },
+  { n: 64, sym: 'Gd', name: 'Gadolinium', cat: 'Lanthanide', mass: '157.25', period: 8, group: 10, melt: '1313', boil: '3273', density: '7.90', discoveredBy: 'J.C.G. de Marignac', year: '1880' },
+  { n: 65, sym: 'Tb', name: 'Terbium', cat: 'Lanthanide', mass: '158.93', period: 8, group: 11, melt: '1356', boil: '3230', density: '8.23', discoveredBy: 'Carl Gustaf Mosander', year: '1843' },
+  { n: 66, sym: 'Dy', name: 'Dysprosium', cat: 'Lanthanide', mass: '162.50', period: 8, group: 12, melt: '1412', boil: '2567', density: '8.540', discoveredBy: 'Paul-Émile Lecoq de Boisbaudran', year: '1886' },
+  { n: 67, sym: 'Ho', name: 'Holmium', cat: 'Lanthanide', mass: '164.93', period: 8, group: 13, melt: '1472', boil: '2700', density: '8.79', discoveredBy: 'Marc Delafontaine & J.L. Soret', year: '1878' },
+  { n: 68, sym: 'Er', name: 'Erbium', cat: 'Lanthanide', mass: '167.26', period: 8, group: 14, melt: '1529', boil: '2868', density: '9.066', discoveredBy: 'Carl Gustaf Mosander', year: '1843' },
+  { n: 69, sym: 'Tm', name: 'Thulium', cat: 'Lanthanide', mass: '168.93', period: 8, group: 15, melt: '1545', boil: '1950', density: '9.32', discoveredBy: 'Per Teodor Cleve', year: '1879' },
+  { n: 70, sym: 'Yb', name: 'Ytterbium', cat: 'Lanthanide', mass: '173.04', period: 8, group: 16, melt: '824', boil: '1196', density: '6.90', discoveredBy: 'J.C.G. de Marignac', year: '1878' },
+  { n: 71, sym: 'Lu', name: 'Lutetium', cat: 'Lanthanide', mass: '174.97', period: 8, group: 17, melt: '1663', boil: '3402', density: '9.841', discoveredBy: 'Georges Urbain', year: '1907' },
+  { n: 72, sym: 'Hf', name: 'Hafnium', cat: 'Transition Metal', mass: '178.49', period: 6, group: 4, melt: '2233', boil: '4603', density: '13.31', discoveredBy: 'Dirk Coster & G. de Hevesy', year: '1922' },
+  { n: 73, sym: 'Ta', name: 'Tantalum', cat: 'Transition Metal', mass: '180.95', period: 6, group: 5, melt: '3017', boil: '5458', density: '16.69', discoveredBy: 'Anders Gustaf Ekeberg', year: '1802' },
+  { n: 74, sym: 'W', name: 'Tungsten', cat: 'Transition Metal', mass: '183.84', period: 6, group: 6, melt: '3422', boil: '5555', density: '19.25', discoveredBy: 'Juan José & Fausto Elhuyar', year: '1783' },
+  { n: 75, sym: 'Re', name: 'Rhenium', cat: 'Transition Metal', mass: '186.21', period: 6, group: 7, melt: '3186', boil: '5596', density: '21.02', discoveredBy: 'Masataka Ogawa', year: '1925' },
+  { n: 76, sym: 'Os', name: 'Osmium', cat: 'Transition Metal', mass: '190.23', period: 6, group: 8, melt: '3033', boil: '5012', density: '22.59', discoveredBy: 'Smithson Tennant', year: '1803' },
+  { n: 77, sym: 'Ir', name: 'Iridium', cat: 'Transition Metal', mass: '192.22', period: 6, group: 9, melt: '2446', boil: '4428', density: '22.56', discoveredBy: 'Smithson Tennant', year: '1803' },
+  { n: 78, sym: 'Pt', name: 'Platinum', cat: 'Transition Metal', mass: '195.08', period: 6, group: 10, melt: '1768', boil: '3825', density: '21.45', discoveredBy: 'Antonio de Ulloa', year: '1735' },
+  { n: 79, sym: 'Au', name: 'Gold', cat: 'Transition Metal', mass: '196.97', period: 6, group: 11, melt: '1064', boil: '2856', density: '19.30', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 80, sym: 'Hg', name: 'Mercury', cat: 'Transition Metal', mass: '200.59', period: 6, group: 12, melt: '−38.8', boil: '356.7', density: '13.534', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 81, sym: 'Tl', name: 'Thallium', cat: 'Post-transition Metal', mass: '204.38', period: 6, group: 13, melt: '304', boil: '1473', density: '11.85', discoveredBy: 'William Crookes', year: '1861' },
+  { n: 82, sym: 'Pb', name: 'Lead', cat: 'Post-transition Metal', mass: '207.2', period: 6, group: 14, melt: '327.5', boil: '1749', density: '11.34', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 83, sym: 'Bi', name: 'Bismuth', cat: 'Post-transition Metal', mass: '208.98', period: 6, group: 15, melt: '271.5', boil: '1564', density: '9.78', discoveredBy: 'Ancient', year: 'Ancient' },
+  { n: 84, sym: 'Po', name: 'Polonium', cat: 'Post-transition Metal', mass: '209', period: 6, group: 16, melt: '254', boil: '962', density: '9.32', discoveredBy: 'Marie & Pierre Curie', year: '1898' },
+  { n: 85, sym: 'At', name: 'Astatine', cat: 'Metalloid', mass: '210', period: 6, group: 17, melt: '302', boil: '337', density: '~7', discoveredBy: 'Dale R. Corson et al.', year: '1940' },
+  { n: 86, sym: 'Rn', name: 'Radon', cat: 'Noble Gas', mass: '222', period: 6, group: 18, melt: '−71', boil: '−61.7', density: '9.73 g/L', discoveredBy: 'Friedrich Ernst Dorn', year: '1900' },
+  { n: 87, sym: 'Fr', name: 'Francium', cat: 'Alkali Metal', mass: '223', period: 7, group: 1, melt: '27', boil: '677', density: '~1.87', discoveredBy: 'Marguerite Perey', year: '1939' },
+  { n: 88, sym: 'Ra', name: 'Radium', cat: 'Alkaline Earth Metal', mass: '226', period: 7, group: 2, melt: '696', boil: '1737', density: '5.5', discoveredBy: 'Marie & Pierre Curie', year: '1898' },
+  { n: 89, sym: 'Ac', name: 'Actinium', cat: 'Actinide', mass: '227', period: 7, group: 3, melt: '1050', boil: '3200', density: '10', discoveredBy: 'André-Louis Debierne', year: '1899' },
+  { n: 90, sym: 'Th', name: 'Thorium', cat: 'Actinide', mass: '232.04', period: 9, group: 4, melt: '1750', boil: '4788', density: '11.72', discoveredBy: 'Jöns Jacob Berzelius', year: '1829' },
+  { n: 91, sym: 'Pa', name: 'Protactinium', cat: 'Actinide', mass: '231.04', period: 9, group: 5, melt: '1568', boil: '4027', density: '15.37', discoveredBy: 'Kasimir Fajans & O. Göhring', year: '1913' },
+  { n: 92, sym: 'U', name: 'Uranium', cat: 'Actinide', mass: '238.03', period: 9, group: 6, melt: '1135', boil: '4131', density: '19.05', discoveredBy: 'Martin Heinrich Klaproth', year: '1789' },
+  { n: 93, sym: 'Np', name: 'Neptunium', cat: 'Actinide', mass: '237', period: 9, group: 7, melt: '644', boil: '4000', density: '20.45', discoveredBy: 'Edwin McMillan & P. Abelson', year: '1940' },
+  { n: 94, sym: 'Pu', name: 'Plutonium', cat: 'Actinide', mass: '244', period: 9, group: 8, melt: '640', boil: '3228', density: '19.84', discoveredBy: 'Glenn T. Seaborg et al.', year: '1940' },
+  { n: 95, sym: 'Am', name: 'Americium', cat: 'Actinide', mass: '243', period: 9, group: 9, melt: '1176', boil: '2011', density: '13.69', discoveredBy: 'Glenn T. Seaborg et al.', year: '1944' },
+  { n: 96, sym: 'Cm', name: 'Curium', cat: 'Actinide', mass: '247', period: 9, group: 10, melt: '1345', boil: '3110', density: '13.51', discoveredBy: 'Glenn T. Seaborg et al.', year: '1944' },
+  { n: 97, sym: 'Bk', name: 'Berkelium', cat: 'Actinide', mass: '247', period: 9, group: 11, melt: '986', boil: '2627', density: '14.79', discoveredBy: 'Glenn T. Seaborg et al.', year: '1949' },
+  { n: 98, sym: 'Cf', name: 'Californium', cat: 'Actinide', mass: '251', period: 9, group: 12, melt: '900', boil: '1472', density: '15.1', discoveredBy: 'Glenn T. Seaborg et al.', year: '1950' },
+  { n: 99, sym: 'Es', name: 'Einsteinium', cat: 'Actinide', mass: '252', period: 9, group: 13, melt: '860', boil: '996', density: '8.84', discoveredBy: 'Lawrence Berkeley Lab', year: '1952' },
+  { n: 100, sym: 'Fm', name: 'Fermium', cat: 'Actinide', mass: '257', period: 9, group: 14, melt: '1527', boil: '—', density: '~28–30', discoveredBy: 'Lawrence Berkeley Lab', year: '1952' },
+  { n: 101, sym: 'Md', name: 'Mendelevium', cat: 'Actinide', mass: '258', period: 9, group: 15, melt: '827', boil: '—', density: '~10', discoveredBy: 'Glenn T. Seaborg et al.', year: '1955' },
+  { n: 102, sym: 'No', name: 'Nobelium', cat: 'Actinide', mass: '259', period: 9, group: 16, melt: '827', boil: '—', density: '~9.9', discoveredBy: 'JINR', year: '1966' },
+  { n: 103, sym: 'Lr', name: 'Lawrencium', cat: 'Actinide', mass: '266', period: 9, group: 17, melt: '1627', boil: '—', density: '~14.4', discoveredBy: 'Lawrence Berkeley Lab', year: '1961' },
+  { n: 104, sym: 'Rf', name: 'Rutherfordium', cat: 'Transition Metal', mass: '267', period: 7, group: 4, melt: '2100', boil: '5500', density: '~23.2', discoveredBy: 'JINR / Lawrence Berkeley Lab', year: '1969' },
+  { n: 105, sym: 'Db', name: 'Dubnium', cat: 'Transition Metal', mass: '268', period: 7, group: 5, melt: '—', boil: '—', density: '~29.3', discoveredBy: 'JINR / Lawrence Berkeley Lab', year: '1970' },
+  { n: 106, sym: 'Sg', name: 'Seaborgium', cat: 'Transition Metal', mass: '269', period: 7, group: 6, melt: '—', boil: '—', density: '~35.0', discoveredBy: 'Lawrence Berkeley Lab', year: '1974' },
+  { n: 107, sym: 'Bh', name: 'Bohrium', cat: 'Transition Metal', mass: '270', period: 7, group: 7, melt: '—', boil: '—', density: '~37.1', discoveredBy: 'GSI Darmstadt', year: '1981' },
+  { n: 108, sym: 'Hs', name: 'Hassium', cat: 'Transition Metal', mass: '270', period: 7, group: 8, melt: '—', boil: '—', density: '~40.7', discoveredBy: 'GSI Darmstadt', year: '1984' },
+  { n: 109, sym: 'Mt', name: 'Meitnerium', cat: 'Unknown Chemical Properties', mass: '278', period: 7, group: 9, melt: '—', boil: '—', density: '~37.4', discoveredBy: 'GSI Darmstadt', year: '1982' },
+  { n: 110, sym: 'Ds', name: 'Darmstadtium', cat: 'Unknown Chemical Properties', mass: '281', period: 7, group: 10, melt: '—', boil: '—', density: '~34.8', discoveredBy: 'GSI Darmstadt', year: '1994' },
+  { n: 111, sym: 'Rg', name: 'Roentgenium', cat: 'Unknown Chemical Properties', mass: '282', period: 7, group: 11, melt: '—', boil: '—', density: '~28.7', discoveredBy: 'GSI Darmstadt', year: '1994' },
+  { n: 112, sym: 'Cn', name: 'Copernicium', cat: 'Transition Metal', mass: '285', period: 7, group: 12, melt: '—', boil: '357±', density: '~14.0', discoveredBy: 'GSI Darmstadt', year: '1996' },
+  { n: 113, sym: 'Nh', name: 'Nihonium', cat: 'Unknown Chemical Properties', mass: '286', period: 7, group: 13, melt: '—', boil: '—', density: '~16', discoveredBy: 'RIKEN', year: '2004' },
+  { n: 114, sym: 'Fl', name: 'Flerovium', cat: 'Unknown Chemical Properties', mass: '289', period: 7, group: 14, melt: '—', boil: '—', density: '~14', discoveredBy: 'JINR', year: '1999' },
+  { n: 115, sym: 'Mc', name: 'Moscovium', cat: 'Unknown Chemical Properties', mass: '290', period: 7, group: 15, melt: '—', boil: '—', density: '~13.5', discoveredBy: 'JINR', year: '2003' },
+  { n: 116, sym: 'Lv', name: 'Livermorium', cat: 'Unknown Chemical Properties', mass: '293', period: 7, group: 16, melt: '—', boil: '—', density: '~12.9', discoveredBy: 'JINR', year: '2000' },
+  { n: 117, sym: 'Ts', name: 'Tennessine', cat: 'Unknown Chemical Properties', mass: '294', period: 7, group: 17, melt: '—', boil: '—', density: '~7.2', discoveredBy: 'JINR / Vanderbilt et al.', year: '2010' },
+  { n: 118, sym: 'Og', name: 'Oganesson', cat: 'Unknown Chemical Properties', mass: '294', period: 7, group: 18, melt: '—', boil: '—', density: '~5', discoveredBy: 'Yuri Oganessian, JINR', year: '2006' },
+];
 
-  const catName = {
-    alkali: 'Alkali Metal', alkaline: 'Alkaline Earth Metal',
-    lanthanide: 'Lanthanide', actinide: 'Actinide',
-    transition: 'Transition Metal', 'post-transition': 'Post-Transition Metal',
-    metalloid: 'Metalloid', nonmetal: 'Nonmetal',
-    halogen: 'Halogen', noble: 'Noble Gas', unknown: 'Unknown'
-  }[cat];
+function getShells(n) {
+  const lim = [2, 8, 18, 32, 32, 18, 8];
+  let rem = n; const s = [];
+  for (const l of lim) { if (rem <= 0) break; s.push(Math.min(rem, l)); rem -= Math.min(rem, l); }
+  return s;
+}
 
-  document.getElementById('infoMeta').innerHTML = `
-    <span>Category: <strong>${catName}</strong></span>
-    <span>Atomic Mass: <strong>${mass}</strong></span>
-    <span>Period: <strong>${row}</strong></span>
-    <span>Group: <strong>${col}</strong></span>
+// ════════════════════════════════════════════════
+//  BUILD TABLE
+// ════════════════════════════════════════════════
+const mainTable = document.getElementById('mainTable');
+const fBlockEl = document.getElementById('fBlock');
+const allElDivs = [];
+
+function makeElDiv(el) {
+  const div = document.createElement('div');
+  div.className = 'element';
+  const color = CATEGORIES[el.cat] || '#fff';
+  div.style.setProperty('--el-color', color);
+  div.dataset.cat = el.cat;
+  div.innerHTML =
+    `<span class="num">${el.n}</span>` +
+    `<span class="symbol">${el.sym}</span>` +
+    `<span class="name">${el.name}</span>`;
+  div.addEventListener('click', () => openModal(el));
+  allElDivs.push(div);
+  return div;
+}
+
+for (let row = 1; row <= 7; row++) {
+  for (let col = 1; col <= 18; col++) {
+    const el = ELEMENTS.find(e =>
+      e.period === row && e.group === col && e.cat !== 'Lanthanide' && e.cat !== 'Actinide'
+    );
+    if (el) {
+      mainTable.appendChild(makeElDiv(el));
+    } else {
+      const b = document.createElement('div');
+      b.style.cssText = 'visibility:hidden;aspect-ratio:1';
+      mainTable.appendChild(b);
+    }
+  }
+}
+
+const lants = ELEMENTS.filter(e => e.cat === 'Lanthanide').sort((a, b) => a.n - b.n);
+const acts = ELEMENTS.filter(e => e.cat === 'Actinide').sort((a, b) => a.n - b.n);
+[...lants, ...acts].forEach(el => fBlockEl.appendChild(makeElDiv(el)));
+
+// ════════════════════════════════════════════════
+//  LEGEND FILTER
+// ════════════════════════════════════════════════
+const legendEl = document.getElementById('legend');
+let activeCat = null;
+
+function applyFilter(cat) {
+  activeCat = cat;
+  for (const div of allElDivs) {
+    if (!cat) { div.classList.remove('dimmed', 'glowing'); }
+    else if (div.dataset.cat === cat) { div.classList.remove('dimmed'); div.classList.add('glowing'); }
+    else { div.classList.remove('glowing'); div.classList.add('dimmed'); }
+  }
+  document.querySelectorAll('.legend-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.cat === cat);
+  });
+}
+
+for (const [name, color] of Object.entries(CATEGORIES)) {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.dataset.cat = name;
+  item.style.setProperty('--leg-color', color);
+  item.style.setProperty('--leg-shadow', color + '55');
+  item.innerHTML = `<div class="legend-dot" style="background:${color}"></div>${name}`;
+  item.addEventListener('click', () => applyFilter(activeCat === name ? null : name));
+  legendEl.appendChild(item);
+}
+
+// ════════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════════
+const overlay = document.getElementById('modalOverlay');
+const modalInfo = document.getElementById('modalInfo');
+const canvasWrap = document.getElementById('modalCanvasWrap');
+const canvas = document.getElementById('atomCanvas');
+let animFrame;
+let dragging = false, lastMX = 0, lastMY = 0;
+let rotAngle = 0, tiltAngle = 0.3, zoomVal = 1;
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function rga(hex, a) { const [r, g, b] = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+
+function openModal(el) {
+  cancelAnimationFrame(animFrame);
+  const color = CATEGORIES[el.cat] || '#a78bfa';
+  const shells = getShells(el.n);
+  const period = el.period <= 7 ? el.period : el.period - 2;
+
+  modalInfo.innerHTML = `
+    <div class="info-head">
+      <div class="modal-num">ELEMENT · No. ${el.n}</div>
+      <div class="modal-symbol" style="color:${color}">${el.sym}</div>
+      <div class="modal-name">${el.name}</div>
+      <div class="modal-badge" style="color:${color};border-color:${color};background:${rga(color, 0.1)}">
+        <div style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        ${el.cat}
+      </div>
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-label">Atomic Mass</div>
+        <div class="stat-val">${el.mass}<span class="stat-unit">u</span></div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Group / Period</div>
+        <div class="stat-val">${el.group} / ${period}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Melting Point</div>
+        <div class="stat-val">${el.melt}<span class="stat-unit">°C</span></div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Boiling Point</div>
+        <div class="stat-val">${el.boil}<span class="stat-unit">°C</span></div>
+      </div>
+      <div class="stat-box full">
+        <div class="stat-label">Density (at melting point)</div>
+        <div class="stat-val">${el.density}<span class="stat-unit">g/cm³</span></div>
+      </div>
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <div class="section-label">Electron Shells</div>
+    <div class="shell-row">
+      ${shells.map((c, i) =>
+    `<div class="shell-pill" style="color:${color};border-color:${rga(color, 0.35)};background:${rga(color, 0.09)}">
+          ${SHELL_NAMES[i]}: ${c}
+        </div>`
+  ).join('')}
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <div class="section-label">Discovery</div>
+    <div class="discovery-box">
+      <div class="discovery-item">
+        <div class="stat-label">Discovered By</div>
+        <div style="font-size:0.78rem;font-weight:500;color:var(--text);line-height:1.4;margin-top:2px">${el.discoveredBy}</div>
+      </div>
+      <div class="discovery-item">
+        <div class="stat-label">Year</div>
+        <div class="stat-val" style="font-size:1.1rem;margin-top:2px;color:${color}">${el.year}</div>
+      </div>
+    </div>
+
+    <button
+      class="know-more-btn"
+      onclick="openKnowMore(${el.n})"
+      style="color:${color};border-color:${rga(color, 0.35)};--btn-color:${color};--btn-bg:${rga(color, 0.08)}"
+    >
+      <span>› Know More about ${el.name}</span>
+      <span class="btn-arrow">→</span>
+    </button>
   `;
 
-  document.getElementById('infoHistory').textContent = history;
-  document.getElementById('infoUses').textContent = uses;
+  overlay.classList.add('active');
+  requestAnimationFrame(() => drawBohr(el.n, color));
+}
 
-  // Apply category accent color to modal border
-  const modal = document.getElementById('infoPanel');
-  modal.style.borderColor = color + '55';
-  modal.style.boxShadow = `0 32px 90px rgba(0,0,0,0.75), 0 0 0 1px ${color}20`;
+document.getElementById('modalClose').addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  if (activeEl) activeEl.classList.remove('active');
-  document.querySelectorAll('.el').forEach(e => {
-    if (e.querySelector('.sym') && e.querySelector('.sym').textContent === sym) {
-      e.classList.add('active');
-      activeEl = e;
+function closeModal() {
+  overlay.classList.remove('active');
+  cancelAnimationFrame(animFrame);
+}
+
+// ════════════════════════════════════════════════
+//  3D ATOM MODEL — true 3D rotation with perspective
+// ════════════════════════════════════════════════
+function drawBohr(atomicNum, color) {
+  const rect = canvasWrap.getBoundingClientRect();
+  canvas.width = rect.width || 340;
+  canvas.height = rect.height || 360;
+
+  const ctx = canvas.getContext('2d');
+  const shells = getShells(atomicNum);
+  const rgb = hexToRgb(color);
+  const shellCount = shells.length;
+
+  // Each shell gets a unique fixed tilt so orbits look spread in 3D space
+  const shellTilts = shells.map((_, s) => (s * Math.PI * 0.45) % (Math.PI * 2));
+
+  // Electron angles evenly distributed per shell
+  const eAngles = shells.map((count, s) =>
+    Array.from({ length: count }, (_, e) => (e / count) * Math.PI * 2 + s * 0.5)
+  );
+  // Inner shells faster, alternating direction
+  const speeds = shells.map((_, i) => (0.022 - i * 0.002) * (i % 2 === 0 ? 1 : -1));
+
+  // Project a 3D point using rotX (drag Y) and rotY (drag X) then perspective
+  function project(x, y, z) {
+    // Rotate around Y axis
+    const cosY = Math.cos(rotAngle), sinY = Math.sin(rotAngle);
+    let x1 = x * cosY - z * sinY;
+    let z1 = x * sinY + z * cosY;
+    // Rotate around X axis
+    const cosX = Math.cos(tiltAngle), sinX = Math.sin(tiltAngle);
+    let y1 = y * cosX - z1 * sinX;
+    let z2 = y * sinX + z1 * cosX;
+    // Perspective divide
+    const fov = 520;
+    const scale = fov / (fov + z2 * 0.25);
+    return { sx: x1 * scale, sy: y1 * scale, depth: z2, scale };
+  }
+
+  function frame() {
+    const W = canvas.width, H = canvas.height;
+    const cx = W / 2, cy = H / 2;
+    const maxR = (Math.min(W, H) / 2 - 14) * zoomVal;
+    const shellRadii = shells.map((_, i) => maxR * (i + 1) / shellCount);
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Radial bg glow
+    const bgG = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.7);
+    bgG.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.07)`);
+    bgG.addColorStop(1, 'transparent');
+    ctx.fillStyle = bgG;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Draw orbit rings (each as a polyline of projected 3D circle) ──
+    for (let s = 0; s < shellCount; s++) {
+      const r = shellRadii[s];
+      const tilt = shellTilts[s];
+      const pts = 72;
+      ctx.beginPath();
+      for (let i = 0; i <= pts; i++) {
+        const a = (i / pts) * Math.PI * 2;
+        // Circle in the plane defined by shellTilts[s]
+        const ox = r * Math.cos(a);
+        const oy = r * Math.sin(a) * Math.cos(tilt);
+        const oz = r * Math.sin(a) * Math.sin(tilt);
+        const p = project(ox, oy, oz);
+        if (i === 0) ctx.moveTo(cx + p.sx, cy + p.sy);
+        else ctx.lineTo(cx + p.sx, cy + p.sy);
+      }
+      ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.18)`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
+
+    // ── Collect electrons with depth for sorting ──
+    const electrons = [];
+    for (let s = 0; s < shellCount; s++) {
+      const r = shellRadii[s];
+      const tilt = shellTilts[s];
+      for (let e = 0; e < shells[s]; e++) {
+        const a = eAngles[s][e];
+        const ox = r * Math.cos(a);
+        const oy = r * Math.sin(a) * Math.cos(tilt);
+        const oz = r * Math.sin(a) * Math.sin(tilt);
+        const p = project(ox, oy, oz);
+        electrons.push({ x: cx + p.sx, y: cy + p.sy, depth: p.depth });
+      }
+    }
+    // Back-to-front paint order
+    electrons.sort((a, b) => a.depth - b.depth);
+
+    for (const { x, y, depth } of electrons) {
+      const norm = (depth + maxR) / (2 * maxR); // 0=back, 1=front
+      const alpha = 0.25 + norm * 0.75;
+      const eSize = (1.8 + norm * 2.8) * zoomVal;
+
+      // Soft glow halo
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, eSize * 4);
+      glow.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha * 0.4})`);
+      glow.addColorStop(1, 'transparent');
+      ctx.beginPath(); ctx.arc(x, y, eSize * 4, 0, Math.PI * 2);
+      ctx.fillStyle = glow; ctx.fill();
+
+      // Electron dot
+      ctx.beginPath(); ctx.arc(x, y, eSize, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+      ctx.fill();
+
+      // Specular highlight
+      ctx.beginPath(); ctx.arc(x - eSize * 0.3, y - eSize * 0.3, eSize * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha * 0.7})`;
+      ctx.fill();
+    }
+
+    // ── Nucleus ──
+    const nR = Math.max(9, Math.min(22, 7 + atomicNum * 0.07)) * zoomVal;
+
+    // Outer glow
+    const nucOut = ctx.createRadialGradient(cx, cy, 0, cx, cy, nR * 3.5);
+    nucOut.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.3)`);
+    nucOut.addColorStop(1, 'transparent');
+    ctx.beginPath(); ctx.arc(cx, cy, nR * 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = nucOut; ctx.fill();
+
+    // Sphere gradient
+    const nucG = ctx.createRadialGradient(cx - nR * 0.35, cy - nR * 0.35, nR * 0.05, cx, cy, nR);
+    nucG.addColorStop(0, 'rgba(255,255,255,0.97)');
+    nucG.addColorStop(0.2, `rgba(${Math.min(255, rgb[0] + 70)},${Math.min(255, rgb[1] + 70)},${Math.min(255, rgb[2] + 70)},1)`);
+    nucG.addColorStop(0.65, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`);
+    nucG.addColorStop(1, `rgba(${Math.max(0, rgb[0] - 55)},${Math.max(0, rgb[1] - 55)},${Math.max(0, rgb[2] - 55)},0.85)`);
+    ctx.beginPath(); ctx.arc(cx, cy, nR, 0, Math.PI * 2);
+    ctx.fillStyle = nucG; ctx.fill();
+
+    // Atomic number label on nucleus
+    if (nR >= 12) {
+      ctx.font = `bold ${Math.round(nR * 0.82)}px 'Inter', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillText(atomicNum, cx, cy);
+    }
+
+    // Advance electrons
+    for (let s = 0; s < shellCount; s++)
+      for (let e = 0; e < shells[s]; e++)
+        eAngles[s][e] += speeds[s];
+
+    animFrame = requestAnimationFrame(frame);
+  }
+
+  frame();
+}
+
+// ════════════════════════════════════════════════
+//  DRAG / ZOOM
+// ════════════════════════════════════════════════
+canvas.addEventListener('mousedown', e => { dragging = true; lastMX = e.clientX; lastMY = e.clientY; });
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  rotAngle += (e.clientX - lastMX) * 0.012;
+  tiltAngle += (e.clientY - lastMY) * 0.012;
+  lastMX = e.clientX; lastMY = e.clientY;
+});
+window.addEventListener('mouseup', () => dragging = false);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomVal = Math.max(0.5, Math.min(2, zoomVal - e.deltaY * 0.0012));
+}, { passive: false });
+canvas.addEventListener('touchstart', e => { dragging = true; lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY; }, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!dragging) return;
+  rotAngle += (e.touches[0].clientX - lastMX) * 0.012;
+  tiltAngle += (e.touches[0].clientY - lastMY) * 0.012;
+  lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+  e.preventDefault();
+}, { passive: false });
+canvas.addEventListener('touchend', () => dragging = false);
+window.addEventListener('resize', () => {
+  if (overlay.classList.contains('active')) {
+    const r = canvasWrap.getBoundingClientRect();
+    canvas.width = r.width || 340; canvas.height = r.height || 360;
+  }
+});
+
+// ════════════════════════════════════════════════
+//  KNOW MORE PANEL
+// ════════════════════════════════════════════════
+const kmOverlay = document.getElementById('kmOverlay');
+const kmPanel = document.getElementById('kmPanel');
+const kmClose = document.getElementById('kmClose');
+const kmBody = document.getElementById('kmBody');
+const kmSymbolEl = document.getElementById('kmSymbol');
+const kmNameEl = document.getElementById('kmName');
+const kmSubEl = document.getElementById('kmSub');
+
+kmClose.addEventListener('click', () => kmOverlay.classList.remove('active'));
+kmOverlay.addEventListener('click', e => { if (e.target === kmOverlay) kmOverlay.classList.remove('active'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') kmOverlay.classList.remove('active'); });
+
+async function openKnowMore(atomicNum) {
+  const el = ELEMENTS.find(e => e.n === atomicNum);
+  if (!el) return;
+
+  const color = CATEGORIES[el.cat] || '#a78bfa';
+  kmPanel.style.setProperty('--km-color', color);
+  kmPanel.style.borderColor = rga(color, 0.2);
+
+  kmSymbolEl.textContent = el.sym;
+  kmSymbolEl.style.color = color;
+  kmNameEl.textContent = el.name;
+  kmSubEl.textContent = `${el.cat} · No. ${el.n}`;
+
+  kmBody.innerHTML = `
+    <div class="km-loading" style="--km-color:${color}">
+      <div class="km-spinner"></div>
+      <span>Loading element data…</span>
+    </div>`;
+
+  kmOverlay.classList.add('active');
+
+  const occurrenceLabel = ['Actinide', 'Lanthanide'].includes(el.cat) || el.n >= 93
+    ? 'Synthesis'
+    : 'Occurrence';
+
+  const prompt = `You are a concise science encyclopedia. Respond ONLY with valid JSON, no markdown fences, no extra text.
+
+For the chemical element ${el.name} (symbol: ${el.sym}, atomic number: ${el.n}, category: ${el.cat}), return this exact JSON structure:
+
+{
+  "summary": "2–3 sentence overview of what ${el.name} is and why it matters",
+  "discovery": "2–3 sentences on how and when ${el.name} was discovered, by whom, and any interesting context",
+  "${occurrenceLabel.toLowerCase()}": "2–3 sentences on ${el.n >= 93 ? `how ${el.name} is synthesized in labs or reactors` : `where ${el.name} is found in nature, its abundance, and main sources`}",
+  "properties": [
+    "One key physical or chemical property as a short sentence",
+    "Another notable property",
+    "A third distinct property"
+  ],
+  "uses": [
+    "One major real-world application as a short sentence",
+    "Another important use",
+    "A third application"
+  ]
+}`;
+
+
+
+
+  function renderKmInfo(info) {
+    kmBody.innerHTML = `
+      <p class="km-summary">${info.summary}</p>
+      <div class="km-section"><div class="km-section-title">Discovery</div><div class="km-section-body">${info.discovery}</div></div>
+      <div class="km-section"><div class="km-section-title">${occurrenceLabel}</div><div class="km-section-body">${info[occurrenceLabel.toLowerCase()]}</div></div>
+      <div class="km-section"><div class="km-section-title">Properties</div><div class="km-bullets">${info.properties.map(p => `<div class="km-bullet">${p}</div>`).join('')}</div></div>
+      <div class="km-section"><div class="km-section-title">Uses</div><div class="km-bullets">${info.uses.map(u => `<div class="km-bullet">${u}</div>`).join('')}</div></div>
+    `;
+  }
+
+  try {
+    let info;
+    info = await callAI(prompt, 1000);
+    renderKmInfo(info);
+  } catch (err) {
+    kmBody.innerHTML = `
+      <div class="km-error">
+        Unable to load data for ${el.name}.<br>
+        <small style="opacity:0.6;font-size:0.7rem">${err.message}</small><br><br>
+        <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(el.name)}"
+           target="_blank" rel="noopener"
+           style="color:${color};text-decoration:underline;font-weight:600">
+          Read on Wikipedia →
+        </a>
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════════════
+//  MINI GAMES
+// ════════════════════════════════════════════════
+document.getElementById('btnMixer').addEventListener('click', () => {
+  document.getElementById('mixerOverlay').classList.add('active');
+});
+document.getElementById('btnQuiz').addEventListener('click', () => {
+  document.getElementById('quizOverlay').classList.add('active');
+});
+
+// ── CLOSE HANDLERS ──
+['mixerClose', 'quizClose'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    document.getElementById(id.replace('Close', 'Overlay')).classList.remove('active');
   });
+});
+document.getElementById('mixerOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('mixerOverlay'))
+    document.getElementById('mixerOverlay').classList.remove('active');
+});
+document.getElementById('quizOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('quizOverlay'))
+    document.getElementById('quizOverlay').classList.remove('active');
+});
 
-  document.getElementById('modalOverlay').classList.add('visible');
-  document.getElementById('infoPanel').classList.add('visible');
+// ══════════════════════════════════════
+//  ELEMENT MIXER (improved)
+// ══════════════════════════════════════
+let mixerSelected = [];
+const mixerHistory = [];
+const MAX_HISTORY = 5;
+const HAZARD_ICONS = { 'acid': '\u2620\uFE0F', 'explosive': '\uD83D\uDCA5', 'toxic': '\u2620\uFE0F', 'radioactive': '\u2622\uFE0F', 'flammable': '\uD83D\uDD25', 'corrosive': '\u26A0\uFE0F', 'oxide': '\uD83C\uDF2C\uFE0F', 'salt': '\uD83E\uDDC2', 'alloy': '\u2699\uFE0F', 'polymer': '\uD83E\uDDEC', 'gas': '\uD83D\uDCA8' };
+function getHazardIcon(type) { if (!type) return '\uD83E\uDDEA'; const t = type.toLowerCase(); for (const [k, v] of Object.entries(HAZARD_ICONS)) { if (t.includes(k)) return v; } return '\uD83E\uDDEA'; }
+
+const mixerSearchEl = document.getElementById('mixerSearch');
+const mixerDropdownEl = document.getElementById('mixerDropdown');
+const mixerSlotsEl = document.getElementById('mixerSlots');
+const mixerSlotsWrap = document.getElementById('mixerSlotsWrap');
+const mixBtn = document.getElementById('mixBtn');
+const mixerResult = document.getElementById('mixerResult');
+const mixerReactionAnim = document.getElementById('mixerReactionAnim');
+
+function renderMixerSlots() {
+  if (mixerSelected.length === 0) {
+    mixerSlotsEl.innerHTML = '<span class="mixer-empty-hint">No elements selected yet\u2026</span>';
+    mixerSlotsWrap.classList.remove('has-items');
+  } else {
+    mixerSlotsWrap.classList.add('has-items');
+    mixerSlotsEl.innerHTML = mixerSelected.map((e, i) => {
+      const color = CATEGORIES[e.cat] || '#a78bfa';
+      return '<div class="mixer-slot" style="color:' + color + ';border-color:' + color + '44;background:' + color + '11" data-i="' + i + '"><span>' + e.sym + '</span><span style="font-weight:400;color:var(--text-mid)">' + e.name + '</span><span class="mixer-slot-x">\u2715</span></div>';
+    }).join('');
+    mixerSlotsEl.querySelectorAll('.mixer-slot').forEach(s =>
+      s.addEventListener('click', () => {
+        mixerSelected.splice(parseInt(s.dataset.i), 1);
+        renderMixerSlots();
+        mixerReactionAnim.style.display = 'none';
+        mixerResult.innerHTML = '';
+      })
+    );
+  }
+  mixBtn.disabled = mixerSelected.length < 2;
 }
 
-function closePanel() {
-  document.getElementById('infoPanel').classList.remove('visible');
-  document.getElementById('modalOverlay').classList.remove('visible');
-  if (activeEl) activeEl.classList.remove('active');
-  activeEl = null;
+mixerSearchEl.addEventListener('input', () => {
+  const q = mixerSearchEl.value.trim().toLowerCase();
+  mixerDropdownEl.innerHTML = '';
+  if (!q) return;
+  const matches = ELEMENTS.filter(e =>
+    (e.name.toLowerCase().includes(q) || e.sym.toLowerCase().startsWith(q)) &&
+    !mixerSelected.find(s => s.n === e.n)
+  ).slice(0, 10);
+  matches.forEach(e => {
+    const color = CATEGORIES[e.cat] || '#a78bfa';
+    const d = document.createElement('div');
+    d.className = 'mixer-drop-item';
+    d.innerHTML = '<span class="mixer-drop-sym" style="color:' + color + '">' + e.sym + '</span><span>' + e.name + '</span><span style="margin-left:auto;font-size:0.72rem;color:var(--text-dim)">' + e.cat + '</span>';
+    d.addEventListener('click', () => {
+      if (mixerSelected.length >= 4) return;
+      mixerSelected.push(e);
+      renderMixerSlots();
+      mixerSearchEl.value = ''; mixerDropdownEl.innerHTML = '';
+      mixerResult.innerHTML = ''; mixerReactionAnim.style.display = 'none';
+      mixerSearchEl.focus();
+    });
+    mixerDropdownEl.appendChild(d);
+  });
+});
+document.addEventListener('click', e => { if (!e.target.closest('.mixer-search-wrap')) mixerDropdownEl.innerHTML = ''; });
+
+function showReactionAnim() {
+  const colors = mixerSelected.map(e => CATEGORIES[e.cat] || '#a78bfa');
+  mixerReactionAnim.style.display = 'flex';
+  mixerReactionAnim.className = 'mixer-reaction-anim';
+  const parts = mixerSelected.map((e, i) =>
+    '<div class="mixer-anim-el"><span class="mixer-anim-sym" style="color:' + colors[i] + ';animation-delay:' + (i * 0.12) + 's">' + e.sym + '</span><span style="font-size:0.58rem;color:var(--text-dim)">' + e.name + '</span></div>' + (i < mixerSelected.length - 1 ? '<span class="mixer-anim-plus">+</span>' : '')
+  );
+  mixerReactionAnim.innerHTML = parts.join('') + '<span class="mixer-anim-arrow">\u2192</span><span style="font-size:1.3rem">?</span>';
 }
 
-buildTable();
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+function showMixerResult(info) {
+  const c = info.color || '#a78bfa';
+  mixerResult.innerHTML =
+    '<div class="mixer-result-inner" style="border-color:' + c + '44;background:' + c + '0d">' +
+    '<div class="mixer-result-header">' +
+    '<div class="mixer-result-compound" style="color:' + c + '">' + info.formula + '</div>' +
+    '<div class="mixer-hazard">' + getHazardIcon(info.type) + '</div>' +
+    '</div>' +
+    '<div class="mixer-result-name">' + info.name + '</div>' +
+    '<div class="mixer-result-desc">' + info.description + '</div>' +
+    '<div class="mixer-result-desc" style="margin-top:-4px"><strong style="color:' + c + '">Real world:</strong> ' + info.realWorld + '</div>' +
+    '<div class="mixer-result-props">' +
+    '<div class="mixer-prop-tag" style="color:' + c + ';border-color:' + c + '44;background:' + c + '11">' + info.type + '</div>' +
+    info.properties.map(p => '<div class="mixer-prop-tag" style="color:var(--text-mid);border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04)">' + p + '</div>').join('') +
+    '</div>' +
+    '</div>';
+}
+
+function renderMixerHistory() {
+  const cont = document.getElementById('mixerHistoryContainer');
+  if (!cont) return;
+  if (mixerHistory.length === 0) { cont.innerHTML = ''; return; }
+  let rows = mixerHistory.map((h, idx) => {
+    const c = h.color || '#a78bfa';
+    return '<div class="mixer-history-item" data-idx="' + idx + '"><span class="mixer-history-formula" style="color:' + c + '">' + h.formula + '</span><span class="mixer-history-name">' + h.name + '</span><span class="mixer-history-els">' + h.elements + '</span><button class="mixer-history-delete" data-idx="' + idx + '" title="Remove">\u2715</button></div>';
+  }).join('');
+  cont.innerHTML = '<div class="mixer-history-wrap"><div class="mixer-history-header"><div class="mixer-history-title">Recent Reactions</div><button class="mixer-history-clear-all" id="mixerClearAll">Clear All</button></div><div class="mixer-history-list" id="mixerHistoryList">' + rows + '</div></div>';
+  cont.querySelectorAll('.mixer-history-delete').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = btn.closest('.mixer-history-item');
+      row.classList.add('removing');
+      setTimeout(() => { mixerHistory.splice(parseInt(btn.dataset.idx), 1); renderMixerHistory(); }, 200);
+    });
+  });
+  cont.querySelectorAll('.mixer-history-item').forEach(el =>
+    el.addEventListener('click', () => showMixerResult(mixerHistory[parseInt(el.dataset.idx)]))
+  );
+  document.getElementById('mixerClearAll').addEventListener('click', () => {
+    const list = document.getElementById('mixerHistoryList');
+    list.style.transition = 'opacity 0.2s,transform 0.2s'; list.style.opacity = '0'; list.style.transform = 'translateX(8px)';
+    setTimeout(() => { mixerHistory.length = 0; renderMixerHistory(); }, 200);
+  });
+}
+
+mixBtn.addEventListener('click', async () => {
+  if (mixerSelected.length < 2) return;
+  mixBtn.disabled = true; mixBtn.textContent = 'Mixing\u2026';
+  showReactionAnim();
+  mixerResult.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;justify-content:center;color:var(--text-dim);font-size:0.82rem"><div class="km-spinner" style="--km-color:#34d399"></div> Analyzing reaction\u2026</div>';
+  const names = mixerSelected.map(e => e.name + ' (' + e.sym + ')').join(', ');
+  const prompt = 'You are a chemistry expert. A user is mixing these elements: ' + names + '.\nRespond ONLY with valid JSON, no markdown, no preamble:\n{"formula":"Chemical formula","name":"Common name","type":"Category e.g. Oxide/Salt/Alloy/Acid/Polymer","description":"2 sentences.","properties":["p1","p2","p3"],"realWorld":"One sentence.","color":"hex color representing compound"}';
+
+
+
+
+  try {
+    let info;
+    info = await callAI(prompt, 600);
+    info.elements = mixerSelected.map(e => e.sym).join('+');
+    showMixerResult(info);
+    mixerHistory.unshift(info);
+    if (mixerHistory.length > MAX_HISTORY) mixerHistory.pop();
+    renderMixerHistory();
+  } catch (err) {
+    console.error(err);
+    mixerResult.innerHTML = '<div class="km-error">Could not determine the reaction.<br><small style="opacity:0.6;font-size:0.7rem">' + err.message + '</small></div>';
+    mixerReactionAnim.style.display = 'none';
+  }
+  mixBtn.disabled = false; mixBtn.textContent = '\u2697\uFE0F Mix Again \u2192';
+});
+
+// ══════════════════════════════════════
+//  QUIZ GAME (improved)
+// ══════════════════════════════════════
+let quizMode = 'easy', quizQuestions = [], quizCurrent = 0, quizScores = [], quizStreak = 0;
+let quizTimerInterval = null, quizTimeLeft = 0;
+let quizBestScore = { easy: 0, medium: 0, hard: 0 };
+const QUIZ_TIME = { easy: 20, medium: 15, hard: 10 };
+const KEY_LABELS = ['A', 'B', 'C', 'D'];
+
+function bindQuizModeBtns() {
+  document.querySelectorAll('.quiz-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.quiz-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active'); quizMode = btn.dataset.mode;
+    });
+  });
+}
+bindQuizModeBtns();
+document.getElementById('quizStartBtn').addEventListener('click', startQuiz);
+
+async function startQuiz() {
+  quizScores = []; quizCurrent = 0; quizStreak = 0;
+  clearInterval(quizTimerInterval);
+  const quizBody = document.getElementById('quizBody');
+  quizBody.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:32px 0;justify-content:center;color:var(--text-dim);font-size:0.82rem"><div class="km-spinner" style="--km-color:#818cf8"></div> Generating quiz\u2026</div>';
+  const sampleEls = [...ELEMENTS].sort(() => Math.random() - 0.5).slice(0, 18).map(e =>
+    e.name + ' (' + e.sym + ', Z=' + e.n + ', ' + e.cat + ', melts ' + e.melt + '\u00b0C, boils ' + e.boil + '\u00b0C, density ' + e.density + ', discovered ' + e.year + ' by ' + e.discoveredBy + ')'
+  ).join('; ');
+  const difficulties = { easy: 'simple symbol to name, atomic number, or category', medium: 'properties, discovery years, melting/boiling points', hard: 'electron configuration, density comparisons, discoverers' };
+  const prompt = 'You are a periodic table quiz master. Generate exactly 5 multiple-choice questions at ' + quizMode + ' difficulty (' + difficulties[quizMode] + ').\nUse these elements: ' + sampleEls + '\nRespond ONLY with valid JSON array, no markdown:\n[{"question":"...","options":["A","B","C","D"],"answer":0,"explanation":"1-2 sentences."}]\n"answer" is 0-based index. Make all 4 options realistic.';
+
+
+
+
+  try {
+    let questions;
+    questions = await callAI(prompt, 1400);
+    quizQuestions = questions;
+    renderQuizQuestion();
+  } catch (err) {
+    console.error(err);
+    quizBody.innerHTML = '<div class="km-error">Could not generate quiz.<br><small style="opacity:0.6;font-size:0.7rem">' + err.message + '</small></div>';
+  }
+}
+
+function renderQuizQuestion() {
+  clearInterval(quizTimerInterval);
+  const quizBody = document.getElementById('quizBody');
+  if (quizCurrent >= quizQuestions.length) { renderQuizScore(); return; }
+  const q = quizQuestions[quizCurrent], total = quizQuestions.length;
+  const timeLimit = QUIZ_TIME[quizMode] || 15; quizTimeLeft = timeLimit;
+  const pips = Array.from({ length: total }, (_, i) => {
+    let cls = i < quizCurrent ? (quizScores[i] ? 'correct' : 'wrong') : i === quizCurrent ? 'current' : '';
+    return '<div class="quiz-pip ' + cls + '"></div>';
+  }).join('');
+  const opts = q.options.map((opt, i) => '<button class="quiz-option" data-i="' + i + '"><span class="quiz-option-key">' + KEY_LABELS[i] + '</span>' + opt + '</button>').join('');
+  quizBody.innerHTML = '<div class="quiz-progress">' + pips + '</div><div class="quiz-question-wrap"><div class="quiz-q-header"><div style="display:flex;align-items:center;gap:10px;"><div class="quiz-q-num">Question ' + (quizCurrent + 1) + ' / ' + total + '</div><div class="quiz-streak' + (quizStreak >= 2 ? ' visible' : '') + '" id="quizStreak"><span>\uD83D\uDD25</span>' + quizStreak + ' streak</div></div><div class="quiz-timer-wrap"><div class="quiz-timer-bar-wrap"><div class="quiz-timer-bar" id="quizTimerBar" style="width:100%"></div></div><div class="quiz-timer-label" id="quizTimerLabel">' + timeLimit + 's</div></div></div><div class="quiz-question">' + q.question + '</div><div class="quiz-options" id="quizOptions">' + opts + '</div><div class="quiz-feedback" id="quizFeedback" style="display:none"></div></div>';
+  document.querySelectorAll('.quiz-option').forEach(btn => btn.addEventListener('click', () => answerQuiz(parseInt(btn.dataset.i))));
+  const keyHandler = e => { const idx = KEY_LABELS.indexOf(e.key.toUpperCase()); if (idx !== -1 && document.querySelectorAll('.quiz-option:not(:disabled)').length > 0) answerQuiz(idx); };
+  document.addEventListener('keydown', keyHandler);
+  quizBody._keyHandler = keyHandler;
+  quizTimerInterval = setInterval(() => {
+    quizTimeLeft--;
+    const bar = document.getElementById('quizTimerBar'), label = document.getElementById('quizTimerLabel');
+    if (bar) { bar.style.width = ((quizTimeLeft / timeLimit) * 100) + '%'; bar.style.background = quizTimeLeft <= 5 ? '#f87171' : '#818cf8'; }
+    if (label) { label.textContent = quizTimeLeft + 's'; label.className = 'quiz-timer-label' + (quizTimeLeft <= 5 ? ' urgent' : ''); }
+    if (quizTimeLeft <= 0) { clearInterval(quizTimerInterval); answerQuiz(-1); }
+  }, 1000);
+}
+
+function answerQuiz(chosen) {
+  clearInterval(quizTimerInterval);
+  const quizBody = document.getElementById('quizBody');
+  if (quizBody._keyHandler) { document.removeEventListener('keydown', quizBody._keyHandler); quizBody._keyHandler = null; }
+  const q = quizQuestions[quizCurrent], correct = chosen === q.answer;
+  quizScores.push(correct);
+  if (correct) quizStreak++; else quizStreak = 0;
+  document.querySelectorAll('.quiz-option').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.answer) btn.classList.add('correct');
+    else if (i === chosen && !correct) btn.classList.add('wrong');
+  });
+  const fb = document.getElementById('quizFeedback');
+  if (fb) {
+    fb.style.display = 'block'; fb.style.borderColor = correct ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)';
+    const lbl = chosen === -1 ? "⏱ Time's up!" : correct ? '✓ Correct!' : '✗ Incorrect.';
+    fb.innerHTML = '<span style="font-weight:700;color:' + (correct ? '#34d399' : '#f87171') + '">' + lbl + '</span> ' + q.explanation;
+    const hint = document.createElement('div'); hint.className = 'quiz-next-hint';
+    hint.textContent = quizCurrent < quizQuestions.length - 1 ? 'Next question in 2s\u2026' : 'Results in 2s\u2026';
+    fb.insertAdjacentElement('afterend', hint);
+  }
+  setTimeout(() => { quizCurrent++; renderQuizQuestion(); }, 2000);
+}
+
+function renderQuizScore() {
+  clearInterval(quizTimerInterval);
+  const quizBody = document.getElementById('quizBody');
+  const score = quizScores.filter(Boolean).length, total = quizQuestions.length;
+  const pct = Math.round((score / total) * 100), color = pct >= 80 ? '#34d399' : pct >= 50 ? '#facc15' : '#f87171';
+  const msgs = { 100: "Perfect score! You're a chemistry genius! \uD83C\uDFC6", 80: "Excellent work! Nearly flawless. \uD83C\uDF89", 60: "Good effort! Keep exploring the table. \uD83D\uDCDA", 40: "Not bad \u2014 there's room to grow. \uD83E\uDDEA", 0: "Keep exploring the periodic table! \uD83D\uDD2C" };
+  const tier = [100, 80, 60, 40, 0].find(t => pct >= t);
+  const isNew = pct > quizBestScore[quizMode]; if (isNew) quizBestScore[quizMode] = pct;
+  const maxStreak = quizScores.reduce((acc, v) => v ? { ...acc, cur: acc.cur + 1, max: Math.max(acc.max, acc.cur + 1) } : { ...acc, cur: 0 }, { cur: 0, max: 0 }).max;
+  const r = 38, circ = 2 * Math.PI * r, dash = circ - (pct / 100) * circ;
+  const pips = quizScores.map(s => '<div class="quiz-pip ' + (s ? 'correct' : 'wrong') + '"></div>').join('');
+  const breakdown = '<div class="quiz-breakdown"><div class="quiz-breakdown-item"><div class="quiz-breakdown-val" style="color:#34d399">' + score + '</div><div class="quiz-breakdown-lbl">Correct</div></div><div class="quiz-breakdown-item"><div class="quiz-breakdown-val" style="color:#f87171">' + (total - score) + '</div><div class="quiz-breakdown-lbl">Missed</div></div><div class="quiz-breakdown-item"><div class="quiz-breakdown-val" style="color:#facc15">' + maxStreak + '</div><div class="quiz-breakdown-lbl">Best Streak</div></div></div>';
+  quizBody.innerHTML = '<div class="quiz-progress">' + pips + '</div><div class="quiz-score-wrap"><div class="quiz-score-ring"><svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="' + r + '" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="6"/><circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="6" stroke-dasharray="' + circ + '" stroke-dashoffset="' + dash + '" stroke-linecap="round" style="transition:stroke-dashoffset 0.8s ease"/></svg><div class="quiz-score-ring-text"><div class="quiz-score-big" style="color:' + color + '">' + score + '/' + total + '</div><div class="quiz-score-sub">' + pct + '%</div></div></div>' + (isNew ? '<div class="quiz-best-badge">\uD83C\uDFC5 New best for ' + quizMode + '!</div>' : '') + '<div class="quiz-score-msg">' + msgs[tier] + '</div>' + breakdown + '</div><button class="mix-btn" id="playAgainBtn" style="background:linear-gradient(135deg,#818cf8,#a78bfa)">Play Again \u2192</button>';
+  document.getElementById('playAgainBtn').addEventListener('click', () => {
+    quizBody.innerHTML = '<div class="quiz-start"><p class="game-intro">Test your knowledge of the periodic table. Each round has 5 questions.</p><div class="quiz-mode-row"><button class="quiz-mode-btn' + (quizMode === 'easy' ? ' active' : '') + '" data-mode="easy">Easy<span class="quiz-mode-hint">Symbol/Name</span></button><button class="quiz-mode-btn' + (quizMode === 'medium' ? ' active' : '') + '" data-mode="medium">Medium<span class="quiz-mode-hint">Properties</span></button><button class="quiz-mode-btn' + (quizMode === 'hard' ? ' active' : '') + '" data-mode="hard">Hard<span class="quiz-mode-hint">Config/Density</span></button></div><button class="mix-btn" id="quizStartBtn">Start Quiz \u2192</button></div>';
+    bindQuizModeBtns();
+    document.getElementById('quizStartBtn').addEventListener('click', startQuiz);
+  });
+}
